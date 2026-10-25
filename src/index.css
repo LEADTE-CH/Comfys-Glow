@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --color-gold: #C9A15B;
+    --color-burgundy: #59172F;
+    --color-plum: #5B286F;
+    --color-lavender: #E9DDF2;
+    --color-ivory: #FFF9F2;
+    --color-charcoal: #29232B;
+    --color-mauve: #B78FA8;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #FFF9F2;
+    color: #29232B;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* Custom font utilities */
+.font-serif {
+  font-family: 'Playfair Display', 'Cormorant Garamond', Georgia, serif;
+}
+
+.font-display {
+  font-family: 'Cormorant Garamond', 'Playfair Display', Georgia, serif;
+}
+
+.font-sans {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+}
+
+/* Custom gold gradient borders and glass effects */
+.gold-shimmer {
+  background: linear-gradient(135deg, #DFBE82 0%, #C9A15B 50%, #B0853C 100%);
+}
+
+.gold-border {
+  border-color: #C9A15B40;
+}
+
+.bg-ivory {
+  background-color: #FFF9F2;
+}
+
+.bg-burgundy {
+  background-color: #59172F;
+}
+
+.bg-plum {
+  background-color: #5B286F;
+}
+
+.text-gold {
+  color: #C9A15B;
+}
+
+.text-burgundy {
+  color: #59172F;
+}
+
+.text-plum {
+  color: #5B286F;
+}
+
+.border-gold {
+  border-color: #C9A15B;
+}
+
+.border-burgundy {
+  border-color: #59172F;
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Comfy’s Glow — Glow with Elegance",
+  "description": "Premium luxury beauty, artisanal soap, and fine fragrance e-commerce store for Comfy's Glow, based in Ado-Ekiti, Ekiti State, Nigeria.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
