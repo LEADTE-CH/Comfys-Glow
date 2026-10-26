@@ -1,5 +1,34 @@
 {
-  "users": [],
+  "users": [
+    {
+      "id": "user-admin-1",
+      "fullName": "Clement Comfort (Owner)",
+      "email": "clementcomfort@gmail.com",
+      "phone": "08020836595",
+      "role": "admin",
+      "address": "Comfy's Glow Headquarters, Bank Road",
+      "city": "Ado-Ekiti",
+      "state": "Ekiti State",
+      "wishlist": [],
+      "recentlyViewed": [],
+      "passwordHash": "03ab0626e7d59d1e0739153471c6d79d5bf2e9561b07d670182ab83026312638b2ccd99f7c5dd0b60d39c96628f05143e14937418ac55ad7b6d376cf53be588d",
+      "createdAt": "2026-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "user-customer-demo",
+      "fullName": "Testimony Daniel",
+      "email": "testimonydan03@gmail.com",
+      "phone": "08031234567",
+      "role": "customer",
+      "address": "15 University Road, Oye-Ekiti",
+      "city": "Oye-Ekiti",
+      "state": "Ekiti State",
+      "wishlist": [],
+      "recentlyViewed": [],
+      "passwordHash": "21f228e435defe379bbd29892685c82eb0f6cd11153093194a09aed27cb653fbda350fe88bc4b55c0687f0f1855e53fd966a202901070b826cc24e5987d07a27",
+      "createdAt": "2026-01-01T00:00:00.000Z"
+    }
+  ],
   "products": [
     {
       "id": "prod-black-soap",
