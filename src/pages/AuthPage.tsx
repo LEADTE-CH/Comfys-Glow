@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { resolveAssetUrl } from '../utils/assets.ts';
+import { normalizeNigerianPhoneNumber } from '../utils/phone.ts';
 
 interface AuthPageProps {
   initialMode?: 'login' | 'register';
@@ -45,8 +46,15 @@ export const AuthPage: React.FC<AuthPageProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
+    let normalizedPhone = '';
 
     if (mode === 'register') {
+      const validatedPhone = normalizeNigerianPhoneNumber(phone);
+      if (!validatedPhone) {
+        setErrorMsg('Enter a valid Nigerian mobile number: 10 digits after +234.');
+        return;
+      }
+      normalizedPhone = validatedPhone;
       if (password.length < 6) {
         setErrorMsg('Password must be at least 6 characters long.');
         return;
@@ -71,7 +79,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
         const res = await register({
           fullName,
           email,
-          phone,
+          phone: normalizedPhone,
           password,
           address,
           city,
@@ -163,18 +171,31 @@ export const AuthPage: React.FC<AuthPageProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[#29232B] mb-1">Phone Number *</label>
-                <div className="relative">
-                  <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <label htmlFor="registration-phone" className="block text-xs font-semibold text-[#29232B] mb-1">
+                  Phone Number *
+                </label>
+                <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl focus-within:border-[#C9A15B]">
+                  <span className="pl-3 pr-2 text-xs font-semibold text-[#59172F]" aria-label="Country code +234">
+                    +234
+                  </span>
                   <input
+                    id="registration-phone"
                     type="tel"
                     required
+                    inputMode="numeric"
+                    autoComplete="tel-national"
+                    maxLength={10}
+                    pattern="[789][0-9]{9}"
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="000-000-0000"
-                    className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-[#C9A15B]"
+                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                    placeholder="8031234567"
+                    aria-describedby="registration-phone-hint"
+                    className="w-full min-w-0 px-3 py-2.5 bg-transparent rounded-r-xl text-xs focus:outline-none"
                   />
                 </div>
+                <p id="registration-phone-hint" className="mt-1 text-[11px] text-[#736B76]">
+                  Enter 10 digits after +234.
+                </p>
               </div>
             </>
           )}

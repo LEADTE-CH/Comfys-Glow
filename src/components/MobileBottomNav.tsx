@@ -6,10 +6,11 @@ import { useAuth } from '../context/AuthContext.tsx';
 
 interface MobileBottomNavProps {
   currentView: string;
+  viewParam?: string;
   onNavigate: (view: string, param?: string) => void;
 }
 
-export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ currentView, onNavigate }) => {
+export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ currentView, viewParam, onNavigate }) => {
   const { itemCount, setIsCartOpen } = useCart();
   const { wishlistIds } = useWishlist();
   const { isAuthenticated } = useAuth();
@@ -41,7 +42,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ currentView, o
           onNavigate('auth', 'login');
         }
       },
-      isActive: currentView === 'account' && window.location.hash.includes('wishlist'),
+      isActive: currentView === 'account' && viewParam === 'wishlist',
     },
     {
       id: 'cart',

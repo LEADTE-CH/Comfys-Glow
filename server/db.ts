@@ -1215,6 +1215,8 @@ class DatabaseManager {
     if (!user) return [];
 
     if (!user.recentlyViewed) user.recentlyViewed = [];
+    if (user.recentlyViewed[0] === productId) return user.recentlyViewed;
+
     // Remove if already present to push to top
     user.recentlyViewed = user.recentlyViewed.filter((id) => id !== productId);
     user.recentlyViewed.unshift(productId);

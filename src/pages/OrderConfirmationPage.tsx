@@ -9,11 +9,11 @@ import {
   Calendar,
   MapPin,
 } from 'lucide-react';
-import type { Order } from '../types/index.ts';
+import type { Order, PublicOrderSummary } from '../types/index.ts';
 import { formatNaira, getWhatsAppOrderLink } from '../utils/formatters.ts';
 
 interface OrderConfirmationPageProps {
-  order: Order;
+  order: Order | PublicOrderSummary;
   onNavigate: (view: string, param?: string) => void;
 }
 
@@ -21,6 +21,33 @@ export const OrderConfirmationPage: React.FC<OrderConfirmationPageProps> = ({
   order,
   onNavigate,
 }) => {
+  if (!('customer' in order)) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
+        <div className="bg-white rounded-3xl p-8 sm:p-10 border border-[#C9A15B]/40 shadow-lg text-center space-y-4">
+          <CheckCircle className="w-12 h-12 text-emerald-600 mx-auto" />
+          <span className="text-xs uppercase font-bold tracking-[0.2em] text-[#C9A15B] block">
+            Order Successfully Submitted
+          </span>
+          <h1 className="font-serif text-3xl font-bold text-[#59172F]">Your order is confirmed</h1>
+          <p className="text-sm text-[#4A434D]">
+            Reference: <span className="font-mono font-bold">{order.reference}</span>
+          </p>
+          <p className="text-sm text-[#4A434D]">
+            {order.itemCount} {order.itemCount === 1 ? 'item' : 'items'} · {order.deliveryTown}, {order.deliveryState}
+          </p>
+          <p className="text-lg font-bold text-[#59172F]">Total: {formatNaira(order.total)}</p>
+          <button
+            onClick={() => onNavigate('home')}
+            className="mt-4 px-6 py-3 bg-[#59172F] text-white hover:bg-[#431022] rounded-xl text-xs font-bold transition-colors"
+          >
+            Continue Shopping
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-12 sm:py-16 space-y-8">
       {/* Top Success Badge & Reference */}

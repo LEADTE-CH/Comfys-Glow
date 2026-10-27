@@ -9,6 +9,7 @@ import path from 'path';
 import fs from 'fs';
 import { db, verifyPassword } from './server/db.ts';
 import type { OrderStatus, PaymentStatus, ProductCategory } from './src/types/index.ts';
+import { normalizeNigerianPhoneNumber } from './src/utils/phone.ts';
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -341,6 +342,10 @@ app.post('/api/auth/register', (req: Request, res: Response) => {
     if (!fullName || !email || !phone || !password) {
       return res.status(400).json({ error: 'Full name, email, phone number, and password are required.' });
     }
+    const normalizedPhone = normalizeNigerianPhoneNumber(phone);
+    if (!normalizedPhone) {
+      return res.status(400).json({ error: 'Enter a valid Nigerian mobile number with 10 digits after +234.' });
+    }
     if (password.length < 6) {
       return res.status(400).json({ error: 'Password must be at least 6 characters long.' });
     }
@@ -348,7 +353,7 @@ app.post('/api/auth/register', (req: Request, res: Response) => {
     const user = db.createUser({
       fullName,
       email,
-      phone,
+      phone: normalizedPhone,
       password,
       address,
       city,

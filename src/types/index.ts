@@ -157,6 +157,17 @@ export interface Order {
   statusHistory: OrderStatusHistory[];
 }
 
+export interface PublicOrderSummary {
+  reference: string;
+  status: OrderStatus;
+  paymentStatus: PaymentStatus;
+  total: number;
+  deliveryTown: string;
+  deliveryState: string;
+  createdAt: string;
+  itemCount: number;
+}
+
 export interface DeliveryZone {
   id: string;
   state: string;
