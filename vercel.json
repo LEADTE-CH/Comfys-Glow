@@ -4,8 +4,8 @@
   "framework": "vite",
   "rewrites": [
     {
-      "source": "/api/products",
-      "destination": "/products.json"
+      "source": "/api/:path*",
+      "destination": "https://comfys-glow-api.onrender.com/api/:path*"
     },
     {
       "source": "/(.*)",

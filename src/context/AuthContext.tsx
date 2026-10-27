@@ -23,6 +23,16 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+async function readAuthResponse(res: Response): Promise<{ error?: string; token?: string; user?: User } | null> {
+  try {
+    const data: unknown = await res.json();
+    if (typeof data !== 'object' || data === null) return null;
+    return data as { error?: string; token?: string; user?: User };
+  } catch {
+    return null;
+  }
+}
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('cg_auth_token'));
@@ -65,9 +75,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
-      const data = await res.json();
+      const data = await readAuthResponse(res);
+      if (!data) {
+        return {
+          success: false,
+          error: `The authentication service returned an empty or invalid response (HTTP ${res.status}). Check that the API service is deployed and running.`,
+        };
+      }
       if (!res.ok) {
         return { success: false, error: data.error || 'Login failed' };
+      }
+      if (!data.token || !data.user) {
+        return { success: false, error: 'The authentication service returned an incomplete login response.' };
       }
       localStorage.setItem('cg_auth_token', data.token);
       setToken(data.token);
@@ -85,9 +104,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userData),
       });
-      const data = await res.json();
+      const data = await readAuthResponse(res);
+      if (!data) {
+        return {
+          success: false,
+          error: `The authentication service returned an empty or invalid response (HTTP ${res.status}). Check that the API service is deployed and running.`,
+        };
+      }
       if (!res.ok) {
         return { success: false, error: data.error || 'Registration failed' };
+      }
+      if (!data.token || !data.user) {
+        return { success: false, error: 'The authentication service returned an incomplete registration response.' };
       }
       localStorage.setItem('cg_auth_token', data.token);
       setToken(data.token);

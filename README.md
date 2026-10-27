@@ -166,6 +166,16 @@ npm run build
 npm run start
 ```
 
+### Deploying to Vercel and Render
+Vercel serves the frontend, while the Express API runs as a Render web service. The Render blueprint in `render.yaml` configures the API and a persistent disk for `data/db.json`; persistent storage requires a paid Render service.
+
+1. In Render, create a new Blueprint from this repository and deploy the `comfys-glow-api` service.
+2. Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in the Render service environment. Use the same values for the administrator sign-in page.
+3. Keep the Render service URL as `https://comfys-glow-api.onrender.com`, which is the API destination configured in `vercel.json`. If Render assigns a different URL, update that rewrite destination to match.
+4. Redeploy the Vercel project so `/api/*` requests are forwarded to the running Express API.
+
+The API service needs to be deployed and its environment variables configured before login, orders, or other API-backed features will work on the Vercel site.
+
 ### Administrator Setup
 Copy `.env.example` to `.env`, then set `ADMIN_EMAIL` and a unique `ADMIN_PASSWORD` before starting the server to create the initial administrator account. No default login credentials are included.
 
