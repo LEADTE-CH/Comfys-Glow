@@ -6,11 +6,13 @@
       "email": "clementcomfort@gmail.com",
       "phone": "08020836595",
       "role": "admin",
-      "address": "Comfy's Glow Headquarters, Bank Road",
+      "address": "Comfy's Glow Headquarters, Afao Road",
       "city": "Ado-Ekiti",
       "state": "Ekiti State",
       "wishlist": [],
-      "recentlyViewed": [],
+      "recentlyViewed": [
+        "prod-black-soap"
+      ],
       "passwordHash": "03ab0626e7d59d1e0739153471c6d79d5bf2e9561b07d670182ab83026312638b2ccd99f7c5dd0b60d39c96628f05143e14937418ac55ad7b6d376cf53be588d",
       "createdAt": "2026-01-01T00:00:00.000Z"
     },
@@ -24,9 +26,26 @@
       "city": "Oye-Ekiti",
       "state": "Ekiti State",
       "wishlist": [],
-      "recentlyViewed": [],
+      "recentlyViewed": [
+        "prod-black-soap"
+      ],
       "passwordHash": "21f228e435defe379bbd29892685c82eb0f6cd11153093194a09aed27cb653fbda350fe88bc4b55c0687f0f1855e53fd966a202901070b826cc24e5987d07a27",
       "createdAt": "2026-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "user-1793102811965-451",
+      "fullName": "Joy Bolanle",
+      "email": "danielogunlade46@gmail.com",
+      "phone": "00000000000",
+      "role": "customer",
+      "address": "Iworoko",
+      "city": "Ado-Ekiti",
+      "state": "Ekiti State",
+      "passwordHash": "1341b272cda5701a32cc7e2ac5e795d5aeceb6d90b286a9c844a940d3d53d6456d395936c2085f3e6f9f1281ef9468d9d22ec70cb3f3075dfbf123853651c9d1",
+      "createdAt": "2026-10-27T12:06:51.975Z",
+      "recentlyViewed": [
+        "prod-black-soap"
+      ]
     }
   ],
   "products": [
@@ -836,7 +855,7 @@
       "rating": 5,
       "comment": "Incredible projection and long-lasting scent. People stop me to ask what fragrance I am wearing. Highly recommended!",
       "isVerifiedPurchase": true,
-      "isApproved": true,
+      "isApproved": false,
       "createdAt": "2026-02-25T11:05:00Z"
     }
   ],
@@ -899,5 +918,18 @@
     ]
   },
   "contactMessages": [],
-  "emailNotifications": []
+  "emailNotifications": [
+    {
+      "id": "email-1793103763289-692",
+      "orderId": "order-sample-1",
+      "orderReference": "CG-2026-10482",
+      "recipientEmail": "customer@example.invalid",
+      "recipientName": "Demo Customer",
+      "status": "confirmed",
+      "subject": "Order Confirmed [CG-2026-10482] — Comfy's Glow",
+      "htmlBody": "\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <title>Order Confirmed [CG-2026-10482] — Comfy's Glow</title>\n</head>\n<body style=\"margin: 0; padding: 20px; background-color: #FFF9F2; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #29232B; line-height: 1.6;\">\n  <table role=\"presentation\" style=\"max-width: 620px; width: 100%; margin: 0 auto; background-color: #FFFFFF; border-radius: 12px; overflow: hidden; border: 1px solid #EADDCF; box-shadow: 0 4px 20px rgba(89, 23, 47, 0.05);\">\n    <!-- Brand Header -->\n    <tr>\n      <td style=\"background-color: #59172F; padding: 32px 24px; text-align: center; border-bottom: 3px solid #C9A15B;\">\n        <div style=\"font-family: Georgia, serif; font-size: 26px; color: #FFFFFF; letter-spacing: 2px; font-weight: bold; margin-bottom: 4px;\">\n          COMFY’S GLOW\n        </div>\n        <div style=\"font-size: 12px; color: #C9A15B; text-transform: uppercase; letter-spacing: 3px; font-weight: 600;\">\n          Glow with Elegance • Ado-Ekiti, Nigeria\n        </div>\n      </td>\n    </tr>\n\n    <!-- Status Banner -->\n    <tr>\n      <td style=\"padding: 24px 32px 10px 32px;\">\n        <div style=\"display: inline-block; background-color: #59172F; color: #FFFFFF; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: bold; letter-spacing: 1px; text-transform: uppercase;\">\n          Confirmed & In Production\n        </div>\n        <h1 style=\"font-family: Georgia, serif; font-size: 24px; color: #59172F; margin: 16px 0 10px 0;\">\n          Your Order Has Been Confirmed\n        </h1>\n        <p style=\"font-size: 15px; color: #4A434D; margin: 0 0 20px 0;\">\n          Dear Demo Customer, your order <strong>CG-2026-10482</strong> has been officially confirmed by our beauty boutique team. We are carefully preparing your artisanal beauty selections for dispatch.\n        </p>\n      </td>\n    </tr>\n\n    <!-- Order Summary Card -->\n    <tr>\n      <td style=\"padding: 0 32px;\">\n        <div style=\"background-color: #FFF9F2; border: 1px solid #E8DCDE; border-radius: 8px; padding: 20px; margin-bottom: 24px;\">\n          <table style=\"width: 100%; border-collapse: collapse;\">\n            <tr>\n              <td style=\"font-size: 13px; color: #736B76; text-transform: uppercase; letter-spacing: 1px;\">Order Reference</td>\n              <td style=\"font-size: 13px; color: #736B76; text-transform: uppercase; letter-spacing: 1px; text-align: right;\">Order Date</td>\n            </tr>\n            <tr>\n              <td style=\"font-size: 18px; font-weight: bold; color: #59172F;\">CG-2026-10482</td>\n              <td style=\"font-size: 14px; font-weight: 500; color: #29232B; text-align: right;\">1 Mar 2026</td>\n            </tr>\n          </table>\n        </div>\n      </td>\n    </tr>\n\n    <!-- Items List -->\n    <tr>\n      <td style=\"padding: 0 32px;\">\n        <h2 style=\"font-family: Georgia, serif; font-size: 18px; color: #59172F; margin: 0 0 12px 0; border-bottom: 2px solid #C9A15B; padding-bottom: 6px;\">\n          Selected Items\n        </h2>\n        <table style=\"width: 100%; border-collapse: collapse;\">\n          \n    <tr>\n      <td style=\"padding: 12px 0; border-bottom: 1px solid #E9DDF2;\">\n        <div style=\"font-weight: 600; color: #29232B; font-size: 15px;\">Full Brightening Set</div>\n        \n        <div style=\"font-size: 13px; color: #736B76;\">Quantity: 1 × ₦15,000</div>\n      </td>\n      <td style=\"padding: 12px 0; border-bottom: 1px solid #E9DDF2; text-align: right; font-weight: 600; color: #59172F; font-size: 15px;\">\n        ₦15,000\n      </td>\n    </tr>\n  \n    <tr>\n      <td style=\"padding: 12px 0; border-bottom: 1px solid #E9DDF2;\">\n        <div style=\"font-weight: 600; color: #29232B; font-size: 15px;\">Royal Oud Velvet Eau de Parfum</div>\n        <div style=\"font-size: 13px; color: #736B76;\">Size / Variant: 50ml Standard Flacon</div>\n        <div style=\"font-size: 13px; color: #736B76;\">Quantity: 1 × ₦12,000</div>\n      </td>\n      <td style=\"padding: 12px 0; border-bottom: 1px solid #E9DDF2; text-align: right; font-weight: 600; color: #59172F; font-size: 15px;\">\n        ₦12,000\n      </td>\n    </tr>\n  \n        </table>\n      </td>\n    </tr>\n\n    <!-- Totals -->\n    <tr>\n      <td style=\"padding: 16px 32px 24px 32px;\">\n        <table style=\"width: 100%; border-collapse: collapse;\">\n          <tr>\n            <td style=\"padding: 4px 0; font-size: 14px; color: #736B76;\">Subtotal</td>\n            <td style=\"padding: 4px 0; font-size: 14px; text-align: right; color: #29232B;\">₦27,000</td>\n          </tr>\n          <tr>\n            <td style=\"padding: 4px 0; font-size: 14px; color: #736B76;\">Delivery Charge (Oye-Ekiti (Federal University FUOYE & Town))</td>\n            <td style=\"padding: 4px 0; font-size: 14px; text-align: right; color: #29232B;\">\n              ₦2,500\n            </td>\n          </tr>\n          <tr>\n            <td style=\"padding: 12px 0 0 0; font-size: 18px; font-weight: bold; color: #59172F; border-top: 1px solid #E9DDF2;\">Total</td>\n            <td style=\"padding: 12px 0 0 0; font-size: 20px; font-weight: bold; text-align: right; color: #59172F; border-top: 1px solid #E9DDF2;\">₦29,500</td>\n          </tr>\n        </table>\n      </td>\n    </tr>\n\n    <!-- Delivery & Contact Details -->\n    <tr>\n      <td style=\"padding: 0 32px 32px 32px;\">\n        <div style=\"background-color: #FBF8F5; border: 1px solid #ECE3D7; border-radius: 8px; padding: 20px;\">\n          <h3 style=\"font-size: 15px; margin: 0 0 10px 0; color: #59172F; font-family: Georgia, serif;\">Delivery Destination</h3>\n          <p style=\"margin: 0 0 6px 0; font-size: 14px; color: #4A434D;\">\n            <strong>Recipient:</strong> Demo Customer (000-000-0000)\n          </p>\n          <p style=\"margin: 0; font-size: 14px; color: #4A434D;\">\n            <strong>Address:</strong> Demo address, Oye-Ekiti, Ekiti State\n          </p>\n          <p style=\"margin: 6px 0 0 0; font-size: 13px; color: #736B76;\"><em>Instructions: Demo delivery note</em></p>\n        </div>\n      </td>\n    </tr>\n\n    <!-- Customer Support Footer -->\n    <tr>\n      <td style=\"background-color: #FAF4EB; padding: 24px 32px; border-top: 1px solid #EADDCF; font-size: 13px; color: #695E69; text-align: center;\">\n        <p style=\"margin: 0 0 10px 0; font-size: 14px; font-weight: 600; color: #59172F;\">\n          Questions or Delivery Updates?\n        </p>\n        <p style=\"margin: 0 0 8px 0;\">\n          Call us directly: <a href=\"tel:0000000000\" style=\"color: #59172F; font-weight: bold; text-decoration: none;\">000-000-0000</a>\n        </p>\n        <p style=\"margin: 0 0 12px 0;\">\n          Email: <a href=\"mailto:contact@example.invalid\" style=\"color: #59172F; text-decoration: none;\">contact@example.invalid</a>\n        </p>\n        <div style=\"margin-top: 16px;\">\n          <a href=\"https://wa.me/2348020836595?text=Hello%20Comfys%20Glow%2C%20inquiring%20about%20my%20order%20CG-2026-10482\" style=\"display: inline-block; background-color: #C9A15B; color: #FFFFFF; text-decoration: none; padding: 8px 18px; border-radius: 6px; font-size: 13px; font-weight: bold;\">\n            Chat on WhatsApp\n          </a>\n        </div>\n        <p style=\"margin: 20px 0 0 0; font-size: 11px; color: #A098A2;\">\n          © 2026 Comfy’s Glow. Glow with Elegance. Ado-Ekiti, Ekiti State, Nigeria.\n        </p>\n      </td>\n    </tr>\n  </table>\n</body>\n</html>\n  ",
+      "sentAt": "2026-10-27T12:22:43.289Z",
+      "deliveryStatus": "sent"
+    }
+  ]
 }
