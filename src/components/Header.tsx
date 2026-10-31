@@ -132,12 +132,12 @@ export const Header: React.FC<HeaderProps> = ({
           ========================================================================= */}
       <div className="bg-[#FFFDF9]/95 backdrop-blur-md border-b border-[#E8DCDE]/70">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between gap-3 sm:gap-6 h-16 sm:h-20">
+          <div className="flex items-center justify-between gap-0.5 sm:gap-6 h-16 sm:h-20">
             {/* Mobile Hamburger (Visible on small screens) */}
             <div className="flex items-center gap-2 md:hidden">
               <button
                 onClick={() => setSidebarOpen(true)}
-                className="p-2 -ml-1 text-[#59172F] hover:bg-[#FAF5EE] rounded-xl transition-colors cursor-pointer border border-[#C9A15B]/40 active:scale-95"
+                className="p-1.5 sm:p-2 -ml-1 text-[#59172F] hover:bg-[#FAF5EE] rounded-xl transition-colors cursor-pointer border border-[#C9A15B]/40 active:scale-95"
                 title="Open boutique menu"
                 aria-label="Open menu drawer"
               >
@@ -152,9 +152,9 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Brand Logo & Wordmark (Properly anchored) */}
             <button
               onClick={() => onNavigate('home')}
-              className="flex items-center gap-2.5 sm:gap-3.5 text-left group focus:outline-none cursor-pointer shrink-0"
+              className="flex items-center gap-2 sm:gap-3.5 text-left group focus:outline-none cursor-pointer shrink-0"
             >
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full p-0.5 border-2 border-[#C9A15B] shadow-xs bg-white overflow-hidden flex items-center justify-center transition-transform group-hover:scale-105 shrink-0">
+              <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-full p-0.5 border-2 border-[#C9A15B] shadow-xs bg-white overflow-hidden flex items-center justify-center transition-transform group-hover:scale-105 shrink-0">
                 <img
                   src={resolveAssetUrl('/src/assets/images/comfys_glow_logo_1791541553890.jpg')}
                   alt="Comfy's Glow Logo"
@@ -163,7 +163,7 @@ export const Header: React.FC<HeaderProps> = ({
                 />
               </div>
               <div className="flex flex-col">
-                <span className="font-serif text-base sm:text-2xl font-bold tracking-tight text-[#59172F] group-hover:text-[#5B286F] transition-colors leading-none">
+                <span className="font-serif text-sm min-[380px]:text-base sm:text-2xl font-bold tracking-tight text-[#59172F] group-hover:text-[#5B286F] transition-colors leading-none">
                   Comfy’s Glow
                 </span>
                 <span className="hidden sm:block text-[8px] sm:text-[9.5px] tracking-[0.22em] uppercase font-semibold text-[#C9A15B] leading-none mt-1">
@@ -190,11 +190,11 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
 
             {/* Right Action Suite (Search, WhatsApp, Wishlist, Account, Bag) */}
-            <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+            <div className="flex items-center gap-0 sm:gap-2.5 shrink-0">
               {/* Mobile Search Trigger */}
               <button
                 onClick={onOpenSearch}
-                className="xl:hidden p-2 text-[#29232B] hover:text-[#59172F] hover:bg-[#FAF5EE] rounded-full transition-colors cursor-pointer"
+                className="xl:hidden p-1 sm:p-2 text-[#29232B] hover:text-[#59172F] hover:bg-[#FAF5EE] rounded-full transition-colors cursor-pointer"
                 title="Search store products"
                 aria-label="Search products"
               >
@@ -205,11 +205,11 @@ export const Header: React.FC<HeaderProps> = ({
               {isAdmin && (
                 <button
                   onClick={() => onNavigate('admin')}
-                  className="md:hidden flex items-center gap-1 px-2.5 py-1 bg-[#59172F] text-[#FFF9F2] rounded-full text-[11px] font-bold shadow-xs active:scale-95 cursor-pointer"
+                  className="md:hidden flex items-center gap-1 px-1.5 sm:px-2.5 py-1 bg-[#59172F] text-[#FFF9F2] rounded-full text-[11px] font-bold shadow-xs active:scale-95 cursor-pointer"
                   title="Store Administrator Portal"
                 >
                   <ShieldCheck className="w-3.5 h-3.5 text-[#C9A15B]" />
-                  <span>Admin</span>
+                  <span className="hidden sm:inline">Admin</span>
                 </button>
               )}
 
@@ -351,7 +351,7 @@ export const Header: React.FC<HeaderProps> = ({
               {/* Shopping Bag Button */}
               <button
                 onClick={() => setIsCartOpen(true)}
-                className="relative flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 bg-[#59172F] hover:bg-[#431022] text-[#FFF9F2] rounded-full transition-all shadow-xs hover:shadow-md cursor-pointer active:scale-95"
+                className="relative flex items-center gap-1 px-1.5 py-1.5 sm:gap-1.5 sm:px-3.5 sm:py-2 bg-[#59172F] hover:bg-[#431022] text-[#FFF9F2] rounded-full transition-all shadow-xs hover:shadow-md cursor-pointer active:scale-95"
                 aria-label="Shopping Cart"
               >
                 <ShoppingBag className="w-4 h-4 text-[#C9A15B]" />
@@ -443,7 +443,7 @@ export const Header: React.FC<HeaderProps> = ({
           aria-label="Boutique navigation menu drawer"
         >
           {/* Slide-out drawer panel from the Left */}
-          <div className="w-full max-w-sm sm:max-w-md bg-[#FFFDF9] h-full shadow-2xl flex flex-col border-r-2 border-[#C9A15B]/50 animate-in slide-in-from-left duration-300">
+          <div className="w-full max-w-sm sm:max-w-md bg-[#FFFDF9] h-[100dvh] max-h-[100dvh] min-h-0 shadow-2xl flex flex-col border-r-2 border-[#C9A15B]/50 animate-in slide-in-from-left duration-300">
             {/* Drawer Header */}
             <div className="p-4 sm:p-5 border-b border-[#E8DCDE] bg-[#FAF5EE] flex items-center justify-between shrink-0">
               <div className="flex items-center gap-3">
@@ -496,7 +496,7 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
 
             {/* Scrollable Navigation Menu List */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-5">
+            <div className="min-h-0 flex-1 overscroll-contain overflow-y-auto p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] space-y-5">
               {/* Account Quick Card */}
               {isAuthenticated ? (
                 <div className="p-3.5 bg-[#FAF5EE] rounded-2xl border border-[#C9A15B]/40 space-y-2.5">
@@ -795,7 +795,7 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
 
             {/* Side-Bar Bottom Footer */}
-            <div className="p-4 border-t border-slate-200 bg-white flex items-center justify-between shrink-0">
+            <div className="shrink-0 border-t border-slate-200 bg-white p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] flex items-center justify-between">
               <span className="text-xs text-[#736B76]">© Comfy’s Glow Atelier</span>
               <span className="text-xs text-[#C9A15B] font-bold">Glow with Elegance</span>
             </div>

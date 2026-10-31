@@ -260,7 +260,7 @@ const AppContent: React.FC = () => {
       />
 
       {/* Main View Router */}
-      <main className="flex-1 pb-20 md:pb-0">
+      <main className={currentView === 'admin' ? 'min-w-0 flex-1' : 'flex-1 pb-20 md:pb-0'}>
         <Suspense
           fallback={
             <div className="min-h-[40vh] flex items-center justify-center text-sm text-[#736B76]" role="status">
@@ -370,16 +370,16 @@ const AppContent: React.FC = () => {
       </main>
 
       {/* Universal Luxury Footer */}
-      <Footer
-        onNavigate={handleNavigate}
-      />
+      {currentView !== 'admin' && <Footer onNavigate={handleNavigate} />}
 
       {/* Mobile Sticky Luxury Navigation Bar */}
-      <MobileBottomNav
-        currentView={currentView}
-        viewParam={viewParam}
-        onNavigate={handleNavigate}
-      />
+      {currentView !== 'admin' && (
+        <MobileBottomNav
+          currentView={currentView}
+          viewParam={viewParam}
+          onNavigate={handleNavigate}
+        />
+      )}
 
       {/* Global Slide-Over Cart Drawer */}
       <CartDrawer

@@ -399,42 +399,45 @@ export const AdminDashboard: React.FC<{ onNavigate: (view: string, param?: strin
   });
 
   const soapDrafts = products.filter((p) => p.category === 'soaps');
+  const adminTabs = [
+    { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+    { id: 'orders', label: `Orders (${orders.length})`, icon: ShoppingBag },
+    { id: 'products', label: `Catalogue (${products.length})`, icon: Package },
+    { id: 'soaps', label: '5 Soap Varieties', icon: Sparkles },
+    { id: 'delivery', label: 'Delivery Zones', icon: Truck },
+    { id: 'emails', label: `Emails Log (${emails.length})`, icon: Mail },
+    { id: 'reviews', label: `Reviews (${reviews.length})`, icon: Star },
+    { id: 'customers', label: `Customers (${customers.length})`, icon: Users },
+    { id: 'messages', label: `Inquiries (${messages.length})`, icon: MessageSquare },
+    { id: 'settings', label: 'Settings', icon: Settings },
+  ] as const;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-8">
+    <div className="mx-auto flex h-[calc(100dvh-8.5rem)] w-full min-w-0 max-w-7xl flex-col overflow-hidden px-3 py-2 sm:px-6 md:h-[calc(100dvh-9.5rem)] md:py-4 lg:px-8">
       {/* Admin Title & Bar */}
-      <div className="bg-[#59172F] text-white p-6 sm:p-8 rounded-3xl shadow-lg border border-[#C9A15B] flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
+      <div className="min-w-0 shrink-0 bg-[#59172F] text-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-lg border border-[#C9A15B] flex flex-col md:flex-row justify-between items-start md:items-center gap-3 sm:gap-4">
+        <div className="min-w-0">
           <span className="text-[10px] uppercase font-bold tracking-[0.2em] text-[#C9A15B] block">
             Store Owner Administration Desk
           </span>
-          <h1 className="font-serif text-2xl sm:text-3xl font-bold">
+          <h1 className="font-serif text-xl sm:text-3xl font-bold leading-tight break-words">
             Comfy’s Glow Master Dashboard
           </h1>
-          <p className="text-xs text-[#E9DDF2]/80 mt-1">
+          <p className="text-[11px] sm:text-xs text-[#E9DDF2]/80 mt-1">
             Ado-Ekiti Operational Control • Real Database Statistics • Automated Customer Emails
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <a
-            href="/comfys-glow-project.zip"
-            download="comfys-glow-project.zip"
-            className="px-4 py-2 bg-[#C9A15B] hover:bg-[#b88f47] text-[#29232B] text-xs font-bold rounded-xl transition-all shadow-xs flex items-center gap-1.5"
-            title="Download full project source code as a universal ZIP"
-          >
-            <Package className="w-4 h-4" />
-            <span>Download Project ZIP</span>
-          </a>
+        <div className="flex w-full flex-wrap items-center gap-2 md:w-auto">
           <button
             onClick={() => onNavigate('home')}
-            className="px-4 py-2 bg-white/10 hover:bg-white/20 text-xs font-semibold rounded-xl text-white transition-colors"
+            className="flex-1 rounded-xl bg-white/10 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-white/20 sm:flex-none sm:px-4"
           >
             Storefront
           </button>
           <button
             onClick={fetchAllAdminData}
-            className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-colors"
+            className="shrink-0 rounded-xl bg-white/10 p-2 text-white transition-colors hover:bg-white/20"
             title="Refresh Data"
           >
             <RefreshCw className="w-4 h-4" />
@@ -450,24 +453,23 @@ export const AdminDashboard: React.FC<{ onNavigate: (view: string, param?: strin
       )}
 
       {/* Admin Tabs */}
-      <div className="flex border-b border-[#E8DCDE] gap-2 overflow-x-auto pb-1">
-        {[
-          { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-          { id: 'orders', label: `Orders (${orders.length})`, icon: ShoppingBag },
-          { id: 'products', label: `Catalogue (${products.length})`, icon: Package },
-          { id: 'soaps', label: '5 Soap Varieties', icon: Sparkles },
-          { id: 'delivery', label: 'Delivery Zones', icon: Truck },
-          { id: 'emails', label: `Emails Log (${emails.length})`, icon: Mail },
-          { id: 'reviews', label: `Reviews (${reviews.length})`, icon: Star },
-          { id: 'customers', label: `Customers (${customers.length})`, icon: Users },
-          { id: 'messages', label: `Inquiries (${messages.length})`, icon: MessageSquare },
-          { id: 'settings', label: 'Settings', icon: Settings },
-        ].map((tab) => {
+      <div className="min-w-0 shrink-0 pt-3 sm:pt-4">
+        <label className="sr-only" htmlFor="admin-section-select">Admin section</label>
+        <select
+          id="admin-section-select"
+          value={activeTab}
+          onChange={(event) => setActiveTab(event.target.value as typeof activeTab)}
+          className="w-full rounded-xl border border-[#C9A15B]/50 bg-white px-3 py-3 text-sm font-semibold text-[#59172F] shadow-xs md:hidden"
+        >
+          {adminTabs.map((tab) => <option key={tab.id} value={tab.id}>{tab.label}</option>)}
+        </select>
+        <div className="hidden min-w-0 gap-2 overflow-x-auto overscroll-x-contain border-b border-[#E8DCDE] pb-1 md:flex">
+        {adminTabs.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => setActiveTab(tab.id)}
               className={`px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${
                 isActive
                   ? 'bg-[#59172F] text-white shadow-xs'
@@ -479,40 +481,42 @@ export const AdminDashboard: React.FC<{ onNavigate: (view: string, param?: strin
             </button>
           );
         })}
+        </div>
       </div>
 
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pt-3 sm:pt-4">
       {/* 1. OVERVIEW TAB */}
       {activeTab === 'overview' && stats && (
         <div className="space-y-8">
           {/* Key Metric Tiles */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
-            <div className="bg-white p-5 rounded-2xl border border-[#E8DCDE] shadow-2xs space-y-1">
+            <div className="min-w-0 bg-white p-3 sm:p-5 rounded-2xl border border-[#E8DCDE] shadow-2xs space-y-1">
               <span className="text-[11px] font-semibold text-[#736B76] uppercase tracking-wider block">Total Orders</span>
-              <div className="text-2xl sm:text-3xl font-extrabold text-[#59172F] font-mono">{stats.totalOrders}</div>
+              <div className="text-xl sm:text-3xl font-extrabold text-[#59172F] font-mono">{stats.totalOrders}</div>
               <span className="text-[11px] text-amber-700">{stats.pendingOrders} pending confirmation</span>
             </div>
 
-            <div className="bg-white p-5 rounded-2xl border border-[#E8DCDE] shadow-2xs space-y-1">
+            <div className="min-w-0 bg-white p-3 sm:p-5 rounded-2xl border border-[#E8DCDE] shadow-2xs space-y-1">
               <span className="text-[11px] font-semibold text-[#736B76] uppercase tracking-wider block">Total Revenue</span>
-              <div className="text-2xl sm:text-3xl font-extrabold text-[#59172F] font-mono">{formatNaira(stats.totalRevenue)}</div>
+              <div className="break-all text-xl sm:text-3xl font-extrabold text-[#59172F] font-mono">{formatNaira(stats.totalRevenue)}</div>
               <span className="text-[11px] text-emerald-700">From active orders</span>
             </div>
 
-            <div className="bg-white p-5 rounded-2xl border border-[#E8DCDE] shadow-2xs space-y-1">
+            <div className="min-w-0 bg-white p-3 sm:p-5 rounded-2xl border border-[#E8DCDE] shadow-2xs space-y-1">
               <span className="text-[11px] font-semibold text-[#736B76] uppercase tracking-wider block">Confirmed / Shipped</span>
-              <div className="text-2xl sm:text-3xl font-extrabold text-[#59172F] font-mono">{stats.confirmedOrders + stats.dispatchedOrders}</div>
+              <div className="text-xl sm:text-3xl font-extrabold text-[#59172F] font-mono">{stats.confirmedOrders + stats.dispatchedOrders}</div>
               <span className="text-[11px] text-indigo-700">{stats.deliveredOrders} delivered</span>
             </div>
 
-            <div className="bg-white p-5 rounded-2xl border border-[#E8DCDE] shadow-2xs space-y-1">
+            <div className="min-w-0 bg-white p-3 sm:p-5 rounded-2xl border border-[#E8DCDE] shadow-2xs space-y-1">
               <span className="text-[11px] font-semibold text-[#736B76] uppercase tracking-wider block">Catalogue Count</span>
-              <div className="text-2xl sm:text-3xl font-extrabold text-[#59172F] font-mono">{stats.publishedProducts}</div>
+              <div className="text-xl sm:text-3xl font-extrabold text-[#59172F] font-mono">{stats.publishedProducts}</div>
               <span className="text-[11px] text-slate-500">{stats.draftSoapsCount} draft soap varieties</span>
             </div>
           </div>
 
           {/* Quick Recent Orders */}
-          <div className="bg-white rounded-3xl p-6 border border-[#E8DCDE] shadow-xs space-y-4">
+          <div className="bg-white rounded-3xl p-4 sm:p-6 border border-[#E8DCDE] shadow-xs space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="font-serif text-lg font-bold text-[#59172F]">Recent Customer Orders</h3>
               <button
@@ -525,12 +529,12 @@ export const AdminDashboard: React.FC<{ onNavigate: (view: string, param?: strin
 
             <div className="divide-y divide-slate-100 text-xs">
               {orders.slice(0, 5).map((o) => (
-                <div key={o.id} className="py-3 flex items-center justify-between gap-4">
-                  <div>
+                <div key={o.id} className="py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
+                  <div className="min-w-0 break-words">
                     <span className="font-mono font-bold text-[#59172F]">{o.reference}</span>
-                    <span className="text-[#736B76] ml-2">• {o.customer.fullName} ({o.delivery.town})</span>
+                    <span className="text-[#736B76] block sm:inline sm:ml-2">• {o.customer.fullName} ({o.delivery.town})</span>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2 sm:justify-end sm:gap-3">
                     <span className="font-mono font-bold">{formatNaira(o.total)}</span>
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-slate-100">
                       {o.status}
@@ -654,18 +658,18 @@ export const AdminDashboard: React.FC<{ onNavigate: (view: string, param?: strin
 
       {/* 3. PRODUCTS CATALOGUE MANAGEMENT */}
       {activeTab === 'products' && (
-        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E8DCDE] shadow-xs space-y-6">
+        <div className="min-w-0 bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-[#E8DCDE] shadow-xs space-y-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
+            <div className="min-w-0">
               <h3 className="font-serif text-xl font-bold text-[#59172F]">Product Management</h3>
               <p className="text-xs text-[#736B76]">Manage prices, stock, variants, and draft publishing.</p>
             </div>
 
-            <div className="flex items-center gap-3 w-full sm:w-auto">
+            <div className="flex min-w-0 items-center gap-2 w-full sm:w-auto sm:gap-3">
               <select
                 value={productCategoryFilter}
                 onChange={(e) => setProductCategoryFilter(e.target.value)}
-                className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs"
+                className="min-w-0 flex-1 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs sm:flex-none sm:px-3"
               >
                 <option value="all">All Categories</option>
                 <option value="soaps">Soaps</option>
@@ -689,7 +693,7 @@ export const AdminDashboard: React.FC<{ onNavigate: (view: string, param?: strin
                     isFeatured: false,
                   })
                 }
-                className="px-4 py-2 bg-[#59172F] text-white text-xs font-bold rounded-lg flex items-center gap-1.5 whitespace-nowrap"
+                className="shrink-0 px-2.5 sm:px-4 py-2 bg-[#59172F] text-white text-xs font-bold rounded-lg flex items-center gap-1.5 whitespace-nowrap"
               >
                 <Plus className="w-4 h-4" />
                 <span>Add Product</span>
@@ -747,7 +751,7 @@ export const AdminDashboard: React.FC<{ onNavigate: (view: string, param?: strin
 
       {/* 4. THE 5 SOAP VARIETIES DEDICATED MANAGEMENT */}
       {activeTab === 'soaps' && (
-        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E8DCDE] shadow-xs space-y-6">
+        <div className="min-w-0 bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-[#E8DCDE] shadow-xs space-y-6">
           <div className="border-b border-slate-100 pb-4">
             <span className="text-xs font-bold uppercase tracking-wider text-[#C9A15B]">
               Business Requirement
@@ -762,27 +766,27 @@ export const AdminDashboard: React.FC<{ onNavigate: (view: string, param?: strin
 
           <div className="space-y-4">
             {soapDrafts.map((soap, index) => (
-              <div key={soap.id} className="p-5 rounded-2xl border border-[#E8DCDE] bg-[#FFFDF9] flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div className="flex items-start gap-4">
+              <div key={soap.id} className="min-w-0 p-3 sm:p-5 rounded-2xl border border-[#E8DCDE] bg-[#FFFDF9] flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="flex min-w-0 w-full items-start gap-3 sm:gap-4 md:w-auto">
                   <div className="w-10 h-10 rounded-xl bg-[#59172F] text-white flex items-center justify-center font-serif font-bold text-sm shrink-0">
                     0{index + 1}
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-serif text-base font-bold text-[#29232B]">{soap.name}</h4>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${soap.isDraft ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h4 className="font-serif text-base font-bold text-[#29232B] break-words">{soap.name}</h4>
+                      <span className={`max-w-full text-center text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-normal ${soap.isDraft ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
                         {soap.isDraft ? 'DRAFT (Hidden from Storefront)' : 'PUBLISHED LIVE'}
                       </span>
                     </div>
-                    <p className="text-xs text-[#736B76] mt-0.5">{soap.description}</p>
+                    <p className="text-xs text-[#736B76] mt-0.5 break-words">{soap.description}</p>
                     <p className="text-xs font-mono font-bold text-[#59172F] mt-1">Price: {formatNaira(soap.price)} • Stock: {soap.stock}</p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="w-full sm:w-auto">
                   <button
                     onClick={() => setEditingProduct(soap)}
-                    className="px-4 py-2 bg-[#59172F] text-white text-xs font-bold rounded-lg hover:bg-[#431022]"
+                    className="w-full sm:w-auto px-4 py-2 bg-[#59172F] text-white text-xs font-bold rounded-lg hover:bg-[#431022]"
                   >
                     Edit Variety 0{index + 1}
                   </button>
@@ -891,7 +895,7 @@ export const AdminDashboard: React.FC<{ onNavigate: (view: string, param?: strin
 
       {/* 7. REVIEWS MODERATION TAB */}
       {activeTab === 'reviews' && (
-        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E8DCDE] shadow-xs space-y-6">
+        <div className="min-w-0 bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-[#E8DCDE] shadow-xs space-y-6">
           <div className="border-b border-slate-100 pb-4">
             <h3 className="font-serif text-xl font-bold text-[#59172F]">Customer Reviews Moderation</h3>
             <p className="text-xs text-[#736B76]">Approve, hide, or remove customer feedback.</p>
@@ -899,20 +903,20 @@ export const AdminDashboard: React.FC<{ onNavigate: (view: string, param?: strin
 
           <div className="space-y-3">
             {reviews.map((r) => (
-              <div key={r.id} className="p-4 bg-[#FFF9F2] rounded-xl border border-[#E8DCDE] flex justify-between items-start gap-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
+              <div key={r.id} className="min-w-0 p-3 sm:p-4 bg-[#FFF9F2] rounded-xl border border-[#E8DCDE] flex flex-col sm:flex-row justify-between items-start gap-3 sm:gap-4">
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span className="font-bold text-xs text-[#29232B]">{r.customerName}</span>
                     <span className="text-[11px] text-[#C9A15B]">★ {r.rating}/5</span>
                     <span className="text-[11px] text-[#736B76]">on {r.productName}</span>
                   </div>
-                  <p className="text-xs text-[#4A434D]">{r.comment}</p>
+                  <p className="text-xs text-[#4A434D] break-words">{r.comment}</p>
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="w-full sm:w-auto">
                   <button
                     onClick={() => handleModerateReview(r.id, !r.isApproved)}
-                    className={`px-3 py-1 text-xs font-semibold rounded-lg ${r.isApproved ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'}`}
+                    className={`w-full sm:w-auto whitespace-normal px-3 py-1 text-xs font-semibold rounded-lg ${r.isApproved ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'}`}
                   >
                     {r.isApproved ? 'Approved (Click to Hide)' : 'Hidden (Click to Approve)'}
                   </button>
@@ -1084,6 +1088,8 @@ export const AdminDashboard: React.FC<{ onNavigate: (view: string, param?: strin
           </div>
         </div>
       )}
+
+      </div>
 
       {/* MODAL: ORDER STATUS & NOTIFICATION MANAGER */}
       {selectedOrder && (
