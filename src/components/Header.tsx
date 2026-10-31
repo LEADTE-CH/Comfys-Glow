@@ -201,6 +201,18 @@ export const Header: React.FC<HeaderProps> = ({
                 <Search className="w-5 h-5 text-[#59172F]" />
               </button>
 
+              {/* Mobile Admin Quick Access Button */}
+              {isAdmin && (
+                <button
+                  onClick={() => onNavigate('admin')}
+                  className="md:hidden flex items-center gap-1 px-2.5 py-1 bg-[#59172F] text-[#FFF9F2] rounded-full text-[11px] font-bold shadow-xs active:scale-95 cursor-pointer"
+                  title="Store Administrator Portal"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#C9A15B]" />
+                  <span>Admin</span>
+                </button>
+              )}
+
               {/* Direct WhatsApp Concierge Button */}
               <a
                 href={getWhatsAppInquiryLink()}
@@ -493,10 +505,32 @@ export const Header: React.FC<HeaderProps> = ({
                       {user?.fullName.charAt(0) || 'U'}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-bold text-[#29232B] truncate">{user?.fullName}</p>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <p className="text-xs font-bold text-[#29232B] truncate">{user?.fullName}</p>
+                        {isAdmin && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-[#E9DDF2] text-[#59172F]">
+                            <ShieldCheck className="w-2.5 h-2.5 text-[#59172F]" />
+                            Admin
+                          </span>
+                        )}
+                      </div>
                       <p className="text-[11px] text-[#736B76] truncate">{user?.email}</p>
                     </div>
                   </div>
+
+                  {isAdmin && (
+                    <button
+                      onClick={() => {
+                        setSidebarOpen(false);
+                        onNavigate('admin');
+                      }}
+                      className="w-full py-2.5 px-3 bg-[#59172F] hover:bg-[#431022] text-[#FFF9F2] rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-98 transition-all"
+                    >
+                      <ShieldCheck className="w-4 h-4 text-[#C9A15B]" />
+                      <span>Access Admin Portal</span>
+                    </button>
+                  )}
+
                   <div className="grid grid-cols-2 gap-2 pt-1">
                     <button
                       onClick={() => {
@@ -519,6 +553,18 @@ export const Header: React.FC<HeaderProps> = ({
                       <span>Wishlist ({wishlistIds.length})</span>
                     </button>
                   </div>
+
+                  <button
+                    onClick={() => {
+                      setSidebarOpen(false);
+                      logout();
+                      onNavigate('home');
+                    }}
+                    className="w-full py-1.5 px-2 bg-rose-50 hover:bg-rose-100 rounded-xl text-xs font-semibold text-rose-700 text-center flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <LogOut className="w-3.5 h-3.5 text-rose-600" />
+                    <span>Sign Out</span>
+                  </button>
                 </div>
               ) : (
                 <div className="p-3.5 bg-[#FAF5EE] rounded-2xl border border-[#C9A15B]/40 flex items-center justify-between gap-3">

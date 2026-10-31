@@ -61,6 +61,11 @@ function requireAdmin(req: Request, res: Response, next: NextFunction) {
 
 app.use(asyncRoute(authMiddleware));
 
+// Serve static images directly from public and dist directories
+app.use('/static-images', express.static(path.resolve(process.cwd(), 'dist', 'static-images')));
+app.use('/static-images', express.static(path.resolve(process.cwd(), 'public', 'static-images')));
+app.use('/src/assets/images', express.static(path.resolve(process.cwd(), 'src', 'assets', 'images')));
+
 app.get('/api/health', asyncRoute(async (_req: Request, res: Response) => {
   const { error } = await getSupabaseAdmin().from('profiles').select('auth_user_id').limit(1);
   if (error) {

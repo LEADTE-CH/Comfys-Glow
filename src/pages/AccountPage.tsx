@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Eye,
   MessageCircle,
+  ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { useWishlist } from '../context/WishlistContext.tsx';
@@ -130,20 +131,37 @@ export const AccountPage: React.FC<AccountPageProps> = ({
               Hello, {user?.fullName}
             </h1>
             <p className="text-xs text-[#736B76]">{user?.email} • {user?.phone}</p>
-            <div className="mt-1 flex items-center gap-2 text-[11px] text-[#C9A15B] font-semibold">
+            <div className="mt-1 flex items-center gap-2 text-[11px] text-[#C9A15B] font-semibold flex-wrap">
               <span>Member since {user?.createdAt ? new Date(user.createdAt).getFullYear() : '2026'}</span>
               <span>•</span>
-              <span>Ado-Ekiti Customer Portal</span>
+              <span>{user?.role === 'admin' ? 'Store Administrator Portal' : 'Ado-Ekiti Customer Portal'}</span>
+              {user?.role === 'admin' && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-[#E9DDF2] text-[#59172F]">
+                  <ShieldCheck className="w-3 h-3 text-[#59172F]" />
+                  Authorized Admin
+                </span>
+              )}
             </div>
           </div>
         </div>
 
-        <button
-          onClick={logout}
-          className="px-4 py-2 border border-slate-200 hover:border-rose-300 text-xs font-semibold text-rose-600 rounded-xl transition-colors"
-        >
-          Sign Out
-        </button>
+        <div className="flex items-center gap-2.5 w-full md:w-auto">
+          {user?.role === 'admin' && (
+            <button
+              onClick={() => onNavigate('admin')}
+              className="flex-1 md:flex-initial px-4 py-2.5 bg-[#59172F] hover:bg-[#431022] text-[#FFF9F2] text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-95"
+            >
+              <ShieldCheck className="w-4 h-4 text-[#C9A15B]" />
+              <span>Admin Dashboard</span>
+            </button>
+          )}
+          <button
+            onClick={logout}
+            className="px-4 py-2.5 border border-slate-200 hover:border-rose-300 text-xs font-semibold text-rose-600 rounded-xl transition-colors cursor-pointer"
+          >
+            Sign Out
+          </button>
+        </div>
       </div>
 
       {/* Tabs Bar */}

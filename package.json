@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "vite build",
+    "build": "node scripts/generate-product-catalog.mjs && vite build",
     "start": "tsx server.ts",
     "preview": "vite preview",
     "migrate:supabase": "node scripts/migrate-to-supabase.mjs",

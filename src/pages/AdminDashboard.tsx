@@ -23,6 +23,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.tsx';
+import { supabase } from '../lib/supabase.ts';
 import type { Order, Product, DeliveryZone, Review, BusinessSettings, EmailNotification } from '../types/index.ts';
 import { formatNaira, formatDate } from '../utils/formatters.ts';
 import { resolveAssetUrl } from '../utils/assets.ts';
@@ -63,10 +64,17 @@ export const AdminDashboard: React.FC<{ onNavigate: (view: string, param?: strin
   const [internalNotes, setInternalNotes] = useState('');
   const [actionSuccess, setActionSuccess] = useState('');
 
+  const getValidToken = async (): Promise<string | null> => {
+    if (token) return token;
+    const { data } = (await supabase?.auth.getSession()) || {};
+    return data?.session?.access_token || null;
+  };
+
   // Initial Load
   const fetchAllAdminData = async () => {
-    if (!token) return;
-    const headers = { Authorization: `Bearer ${token}` };
+    const currentToken = await getValidToken();
+    if (!currentToken) return;
+    const headers = { Authorization: `Bearer ${currentToken}` };
 
     try {
       // 1. Overview
@@ -161,13 +169,18 @@ export const AdminDashboard: React.FC<{ onNavigate: (view: string, param?: strin
 
   // --- Handlers ---
   const handleUpdateOrderStatus = async () => {
-    if (!selectedOrder || !token) return;
+    if (!selectedOrder) return;
+    const currentToken = await getValidToken();
+    if (!currentToken) {
+      alert('Your administrator session has expired or is not ready. Please refresh or sign in again.');
+      return;
+    }
     try {
       const res = await fetch(`/api/admin/orders/${selectedOrder.id}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${currentToken}`,
         },
         body: JSON.stringify({
           status: newStatus,
@@ -181,20 +194,27 @@ export const AdminDashboard: React.FC<{ onNavigate: (view: string, param?: strin
         setSelectedOrder(data.order);
         fetchAllAdminData();
         setTimeout(() => setActionSuccess(''), 4000);
+      } else {
+        alert(data.error || 'Failed to update order status');
       }
     } catch (err: any) {
-      alert(err.message);
+      alert(err.message || 'Error updating order status');
     }
   };
 
   const handleSaveInternalNotes = async () => {
-    if (!selectedOrder || !token) return;
+    if (!selectedOrder) return;
+    const currentToken = await getValidToken();
+    if (!currentToken) {
+      alert('Your administrator session has expired.');
+      return;
+    }
     try {
       const res = await fetch(`/api/admin/orders/${selectedOrder.id}/notes`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${currentToken}`,
         },
         body: JSON.stringify({ internalNotes }),
       });
@@ -202,20 +222,28 @@ export const AdminDashboard: React.FC<{ onNavigate: (view: string, param?: strin
         setActionSuccess('Internal notes saved.');
         fetchAllAdminData();
         setTimeout(() => setActionSuccess(''), 3000);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || 'Failed to save notes');
       }
     } catch (err: any) {
-      alert(err.message);
+      alert(err.message || 'Error saving notes');
     }
   };
 
   const handleResendEmail = async (statusToSend: string) => {
-    if (!selectedOrder || !token) return;
+    if (!selectedOrder) return;
+    const currentToken = await getValidToken();
+    if (!currentToken) {
+      alert('Your administrator session has expired.');
+      return;
+    }
     try {
       const res = await fetch(`/api/admin/orders/${selectedOrder.id}/resend-email`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${currentToken}`,
         },
         body: JSON.stringify({ status: statusToSend }),
       });
@@ -224,15 +252,22 @@ export const AdminDashboard: React.FC<{ onNavigate: (view: string, param?: strin
         setActionSuccess(data.message);
         fetchAllAdminData();
         setTimeout(() => setActionSuccess(''), 4000);
+      } else {
+        alert(data.error || 'Failed to resend email');
       }
     } catch (err: any) {
-      alert(err.message);
+      alert(err.message || 'Error resending email');
     }
   };
 
   const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingProduct || !token) return;
+    if (!editingProduct) return;
+    const currentToken = await getValidToken();
+    if (!currentToken) {
+      alert('Your administrator session has expired or is not ready. Please refresh or sign in again.');
+      return;
+    }
 
     try {
       const isNew = !editingProduct.id;
@@ -243,7 +278,7 @@ export const AdminDashboard: React.FC<{ onNavigate: (view: string, param?: strin
         method,
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${currentToken}`,
         },
         body: JSON.stringify(editingProduct),
       });
@@ -253,60 +288,95 @@ export const AdminDashboard: React.FC<{ onNavigate: (view: string, param?: strin
         setActionSuccess(isNew ? 'Product added successfully!' : 'Product updated successfully!');
         fetchAllAdminData();
         setTimeout(() => setActionSuccess(''), 4000);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || 'Failed to save product');
       }
     } catch (err: any) {
-      alert(err.message);
+      alert(err.message || 'Error saving product');
     }
   };
 
   const handleDeleteProduct = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this product?')) return;
+    const currentToken = await getValidToken();
+    if (!currentToken) {
+      alert('Your administrator session has expired.');
+      return;
+    }
     try {
-      await fetch(`/api/admin/products/${id}`, {
+      const res = await fetch(`/api/admin/products/${id}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${currentToken}` },
       });
-      fetchAllAdminData();
-    } catch (e) {
-      console.error(e);
+      if (res.ok) {
+        fetchAllAdminData();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || 'Failed to delete product');
+      }
+    } catch (e: any) {
+      alert(e.message || 'Error deleting product');
     }
   };
 
   const handleModerateReview = async (id: string, isApproved: boolean) => {
+    const currentToken = await getValidToken();
+    if (!currentToken) {
+      alert('Your administrator session has expired.');
+      return;
+    }
     try {
-      await fetch(`/api/admin/reviews/${id}/moderate`, {
+      const res = await fetch(`/api/admin/reviews/${id}/moderate`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${currentToken}`,
         },
         body: JSON.stringify({ isApproved }),
       });
-      fetchAllAdminData();
-    } catch (e) {
-      console.error(e);
+      if (res.ok) {
+        fetchAllAdminData();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || 'Failed to moderate review');
+      }
+    } catch (e: any) {
+      alert(e.message || 'Error moderating review');
     }
   };
 
   const handleSaveZone = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingZone || !token) return;
+    if (!editingZone) return;
+    const currentToken = await getValidToken();
+    if (!currentToken) {
+      alert('Your administrator session has expired.');
+      return;
+    }
     try {
       const isNew = !editingZone.id;
       const url = isNew ? '/api/admin/delivery-zones' : `/api/admin/delivery-zones/${editingZone.id}`;
       const method = isNew ? 'POST' : 'PUT';
-      await fetch(url, {
+      const res = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${currentToken}`,
         },
         body: JSON.stringify(editingZone),
       });
-      setEditingZone(null);
-      fetchAllAdminData();
-    } catch (e) {
-      console.error(e);
+      if (res.ok) {
+        setEditingZone(null);
+        setActionSuccess(isNew ? 'Delivery zone created!' : 'Delivery zone updated!');
+        fetchAllAdminData();
+        setTimeout(() => setActionSuccess(''), 4000);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || 'Failed to save delivery zone');
+      }
+    } catch (e: any) {
+      alert(e.message || 'Error saving delivery zone');
     }
   };
 
@@ -989,15 +1059,25 @@ export const AdminDashboard: React.FC<{ onNavigate: (view: string, param?: strin
 
             <button
               onClick={async () => {
-                await fetch('/api/admin/settings', {
+                const currentToken = await getValidToken();
+                if (!currentToken) {
+                  alert('Your administrator session has expired.');
+                  return;
+                }
+                const res = await fetch('/api/admin/settings', {
                   method: 'PUT',
-                  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentToken}` },
                   body: JSON.stringify(settings),
                 });
-                setActionSuccess('Business settings updated successfully!');
-                setTimeout(() => setActionSuccess(''), 3000);
+                if (res.ok) {
+                  setActionSuccess('Business settings updated successfully!');
+                  setTimeout(() => setActionSuccess(''), 3000);
+                } else {
+                  const data = await res.json().catch(() => ({}));
+                  alert(data.error || 'Failed to update settings');
+                }
               }}
-              className="px-6 py-2.5 bg-[#59172F] text-white font-bold rounded-xl"
+              className="px-6 py-2.5 bg-[#59172F] text-white font-bold rounded-xl cursor-pointer"
             >
               Save Settings
             </button>
