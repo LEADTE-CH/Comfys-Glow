@@ -15,7 +15,7 @@ import { resolveAssetUrl } from '../utils/assets.ts';
 import { normalizeNigerianPhoneNumber } from '../utils/phone.ts';
 
 interface AuthPageProps {
-  initialMode?: 'login' | 'register';
+  initialMode?: 'login' | 'register' | 'forgot-password' | 'reset-password';
   onSuccess: () => void;
   onNavigate: (view: string) => void;
 }
@@ -25,8 +25,8 @@ export const AuthPage: React.FC<AuthPageProps> = ({
   onSuccess,
   onNavigate,
 }) => {
-  const { login, register } = useAuth();
-  const [mode, setMode] = useState<'login' | 'register'>(initialMode);
+  const { login, register, sendPasswordReset, updatePassword } = useAuth();
+  const [mode, setMode] = useState<'login' | 'register' | 'forgot-password' | 'reset-password'>(initialMode);
 
   // Form states
   const [email, setEmail] = useState('');
@@ -42,10 +42,12 @@ export const AuthPage: React.FC<AuthPageProps> = ({
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [infoMsg, setInfoMsg] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
+    setInfoMsg('');
     let normalizedPhone = '';
 
     if (mode === 'register') {
@@ -64,17 +66,39 @@ export const AuthPage: React.FC<AuthPageProps> = ({
         return;
       }
     }
+    if (mode === 'reset-password' && password.length < 6) {
+      setErrorMsg('Password must be at least 6 characters long.');
+      return;
+    }
+    if ((mode === 'register' || mode === 'reset-password') && password !== confirmPassword) {
+      setErrorMsg('Passwords do not match. Please re-check.');
+      return;
+    }
 
     setLoading(true);
 
     try {
-      if (mode === 'login') {
+      if (mode === 'forgot-password') {
+        const result = await sendPasswordReset(email);
+        if (!result.success) {
+          setErrorMsg(result.error || 'Could not send password reset email.');
+          return;
+        }
+        setInfoMsg('If an account exists for that email, a password reset link will be sent.');
+      } else if (mode === 'reset-password') {
+        const result = await updatePassword(password);
+        if (!result.success) {
+          setErrorMsg(result.error || 'Could not update password.');
+          return;
+        }
+        onSuccess();
+      } else if (mode === 'login') {
         const res = await login(email, password);
         if (!res.success) {
           setErrorMsg(res.error || 'Invalid credentials');
-          setLoading(false);
           return;
         }
+        onSuccess();
       } else {
         const res = await register({
           fullName,
@@ -87,11 +111,10 @@ export const AuthPage: React.FC<AuthPageProps> = ({
         });
         if (!res.success) {
           setErrorMsg(res.error || 'Registration failed');
-          setLoading(false);
           return;
         }
+        onSuccess();
       }
-      onSuccess();
     } catch (err: any) {
       setErrorMsg(err.message || 'Authentication error');
     } finally {
@@ -113,24 +136,36 @@ export const AuthPage: React.FC<AuthPageProps> = ({
           />
         </div>
         <h1 className="font-serif text-2xl sm:text-3xl font-bold text-[#59172F]">
-          {mode === 'login' ? 'Welcome Back' : 'Create Customer Account'}
+          {mode === 'login'
+            ? 'Welcome Back'
+            : mode === 'register'
+              ? 'Create Customer Account'
+              : mode === 'forgot-password'
+                ? 'Reset Your Password'
+                : 'Choose a New Password'}
         </h1>
         <p className="text-xs text-[#736B76]">
           {mode === 'login'
             ? 'Sign in to access your orders, track shipments, and manage your wishlist.'
-            : 'Join Comfy’s Glow for personal order tracking, doorstep delivery, and verified reviews.'}
+            : mode === 'register'
+              ? 'Join Comfy’s Glow for personal order tracking, doorstep delivery, and verified reviews.'
+              : mode === 'forgot-password'
+                ? 'Enter your email and we’ll send you a password reset link.'
+                : 'Set a new password for your Comfy’s Glow account.'}
         </p>
       </div>
 
       {/* Auth Card */}
       <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E8DCDE] shadow-sm space-y-6">
         {/* Toggle Mode */}
+        {(mode === 'login' || mode === 'register') ? (
         <div className="flex p-1 bg-slate-100 rounded-xl">
           <button
             type="button"
             onClick={() => {
               setMode('login');
               setErrorMsg('');
+              setInfoMsg('');
             }}
             className={`flex-1 py-2 text-xs font-bold rounded-lg transition-colors ${
               mode === 'login' ? 'bg-white text-[#59172F] shadow-xs' : 'text-slate-600'
@@ -143,6 +178,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
             onClick={() => {
               setMode('register');
               setErrorMsg('');
+              setInfoMsg('');
             }}
             className={`flex-1 py-2 text-xs font-bold rounded-lg transition-colors ${
               mode === 'register' ? 'bg-white text-[#59172F] shadow-xs' : 'text-slate-600'
@@ -151,6 +187,19 @@ export const AuthPage: React.FC<AuthPageProps> = ({
             Register
           </button>
         </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              setMode('login');
+              setErrorMsg('');
+              setInfoMsg('');
+            }}
+            className="text-xs font-semibold text-[#59172F] hover:text-[#C9A15B]"
+          >
+            Back to sign in
+          </button>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {mode === 'register' && (
@@ -200,7 +249,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
             </>
           )}
 
-          <div>
+          {mode !== 'reset-password' && <div>
             <label className="block text-xs font-semibold text-[#29232B] mb-1">Email Address *</label>
             <div className="relative">
               <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -213,10 +262,10 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                 className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-[#C9A15B]"
               />
             </div>
-          </div>
+          </div>}
 
           {/* Password Input with Visibility Toggle */}
-          <div>
+          {(mode === 'login' || mode === 'register' || mode === 'reset-password') && <div>
             <div className="flex items-center justify-between mb-1">
               <label className="block text-xs font-semibold text-[#29232B]">Password *</label>
               <button
@@ -258,10 +307,10 @@ export const AuthPage: React.FC<AuthPageProps> = ({
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
-          </div>
+          </div>}
 
-          {/* Confirm Password (Registration only) */}
-          {mode === 'register' && (
+          {/* Password confirmation for signup and recovery */}
+          {(mode === 'register' || mode === 'reset-password') && (
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="block text-xs font-semibold text-[#29232B]">Confirm Password *</label>
@@ -345,6 +394,12 @@ export const AuthPage: React.FC<AuthPageProps> = ({
             </div>
           )}
 
+          {infoMsg && (
+            <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800" role="status">
+              {infoMsg}
+            </div>
+          )}
+
           {errorMsg && (
             <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700">
               {errorMsg}
@@ -356,9 +411,31 @@ export const AuthPage: React.FC<AuthPageProps> = ({
             disabled={loading}
             className="w-full py-3.5 bg-[#59172F] hover:bg-[#431022] text-[#FFF9F2] text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow-md hover:shadow-lg disabled:opacity-50"
           >
-            {loading ? 'Processing...' : mode === 'login' ? 'Sign In' : 'Create My Account'}
+            {loading
+              ? 'Processing...'
+              : mode === 'login'
+                ? 'Sign In'
+                : mode === 'register'
+                  ? 'Create My Account'
+                  : mode === 'forgot-password'
+                    ? 'Send Reset Link'
+                    : 'Update Password'}
           </button>
         </form>
+
+        {mode === 'login' && (
+          <button
+            type="button"
+            onClick={() => {
+              setMode('forgot-password');
+              setErrorMsg('');
+              setInfoMsg('');
+            }}
+            className="w-full text-xs font-semibold text-[#59172F] hover:text-[#C9A15B]"
+          >
+            Forgot your password?
+          </button>
+        )}
       </div>
     </div>
   );

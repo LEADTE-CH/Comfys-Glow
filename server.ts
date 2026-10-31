@@ -7,7 +7,8 @@ import 'dotenv/config';
 import express, { Request, Response, NextFunction } from 'express';
 import path from 'path';
 import fs from 'fs';
-import { db, verifyPassword } from './server/db.ts';
+import { db } from './server/db.ts';
+import { getSupabaseAdmin, getSupabasePublic } from './server/supabase.ts';
 import type { OrderStatus, PaymentStatus, ProductCategory } from './src/types/index.ts';
 import { normalizeNigerianPhoneNumber } from './src/utils/phone.ts';
 
@@ -17,30 +18,31 @@ const PORT = Number(process.env.PORT) || 3000;
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Simple Bearer / Header Auth Simulation with session storage
-const sessions = new Map<string, { userId: string; role: 'customer' | 'admin'; email: string }>();
+const asyncRoute = (
+  handler: (req: Request, res: Response, next: NextFunction) => Promise<unknown>
+) => (req: Request, res: Response, next: NextFunction) => {
+  handler(req, res, next).catch(next);
+};
 
-function createSessionToken(user: { id: string; role: 'customer' | 'admin'; email: string }): string {
-  const token = `cg_token_${user.id}_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-  sessions.set(token, { userId: user.id, role: user.role, email: user.email });
-  return token;
-}
-
-function authMiddleware(req: Request, res: Response, next: NextFunction) {
+async function authMiddleware(req: Request, _res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    const token = authHeader.split(' ')[1];
-    const session = sessions.get(token);
-    if (session) {
-      const user = db.findUserById(session.userId);
-      if (user) {
-        (req as any).user = user;
-      }
-    }
+  if (!authHeader?.startsWith('Bearer ')) {
+    next();
+    return;
   }
-  next();
-}
 
+  try {
+    const token = authHeader.slice('Bearer '.length);
+    const { data, error } = await getSupabaseAdmin().auth.getUser(token);
+    if (!error && data.user) {
+      const user = await db.findUserByAuthId(data.user.id);
+      if (user) (req as any).user = user;
+    }
+    next();
+  } catch (error) {
+    next(error);
+  }
+}
 function requireAuth(req: Request, res: Response, next: NextFunction) {
   const user = (req as any).user;
   if (!user) {
@@ -57,17 +59,26 @@ function requireAdmin(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
-app.use(authMiddleware);
+app.use(asyncRoute(authMiddleware));
+
+app.get('/api/health', asyncRoute(async (_req: Request, res: Response) => {
+  const { error } = await getSupabaseAdmin().from('profiles').select('auth_user_id').limit(1);
+  if (error) {
+    console.error('Supabase health check failed:', error);
+    return res.status(503).json({ status: 'unavailable', error: 'Supabase database is not ready.' });
+  }
+  res.json({ status: 'ok' });
+}));
 
 /* ==========================================================================
    PUBLIC API ENDPOINTS
    ========================================================================== */
 
 // --- Products ---
-app.get('/api/products', (req: Request, res: Response) => {
+app.get('/api/products', asyncRoute(async (req: Request, res: Response) => {
   try {
     const { category, subcategory, family, featured, search, minPrice, maxPrice, sort } = req.query;
-    let products = db.getProducts(false); // Only published items for public
+    let products = await db.getProducts(false); // Only published items for public
 
     if (category && typeof category === 'string') {
       products = products.filter((p) => p.category === category);
@@ -119,11 +130,11 @@ app.get('/api/products', (req: Request, res: Response) => {
   } catch (err: any) {
     res.status(500).json({ error: err.message || 'Failed to fetch products' });
   }
-});
+}));
 
-app.get('/api/products/:idOrSlug', (req: Request, res: Response) => {
+app.get('/api/products/:idOrSlug', asyncRoute(async (req: Request, res: Response) => {
   const { idOrSlug } = req.params;
-  const product = db.getProductById(idOrSlug) || db.getProductBySlug(idOrSlug);
+  const product = (await db.getProductById(idOrSlug)) || (await db.getProductBySlug(idOrSlug));
   if (!product) {
     return res.status(404).json({ error: 'Product not found' });
   }
@@ -133,23 +144,23 @@ app.get('/api/products/:idOrSlug', (req: Request, res: Response) => {
     return res.status(404).json({ error: 'Product is currently an unpublished draft.' });
   }
   res.json({ product });
-});
+}));
 
 // --- Combos ---
-app.get('/api/combos', (_req: Request, res: Response) => {
-  const combos = db.getProducts(false).filter((p) => p.category === 'combos');
+app.get('/api/combos', asyncRoute(async (_req: Request, res: Response) => {
+  const combos = (await db.getProducts(false)).filter((p) => p.category === 'combos');
   res.json({ combos });
-});
+}));
 
 // --- Delivery Zones & Calculation ---
-app.get('/api/delivery-zones', (_req: Request, res: Response) => {
-  const zones = db.getDeliveryZones();
+app.get('/api/delivery-zones', asyncRoute(async (_req: Request, res: Response) => {
+  const zones = await db.getDeliveryZones();
   res.json({ zones });
-});
+}));
 
-app.post('/api/delivery-zones/calculate', (req: Request, res: Response) => {
+app.post('/api/delivery-zones/calculate', asyncRoute(async (req: Request, res: Response) => {
   const { state, town, zoneId } = req.body;
-  const zones = db.getDeliveryZones();
+  const zones = await db.getDeliveryZones();
 
   if (zoneId) {
     const zone = zones.find((z) => z.id === zoneId);
@@ -182,16 +193,16 @@ app.post('/api/delivery-zones/calculate', (req: Request, res: Response) => {
     manualConfirmationRequired: true,
     message: 'Location outside core zones. Rate will be confirmed manually with you by admin upon submission.',
   });
-});
+}));
 
 // --- Reviews ---
-app.get('/api/reviews', (req: Request, res: Response) => {
+app.get('/api/reviews', asyncRoute(async (req: Request, res: Response) => {
   const { productId } = req.query;
-  const reviews = db.getReviews(typeof productId === 'string' ? productId : undefined, true);
+  const reviews = await db.getReviews(typeof productId === 'string' ? productId : undefined, true);
   res.json({ reviews });
-});
+}));
 
-app.post('/api/reviews', requireAuth, (req: Request, res: Response) => {
+app.post('/api/reviews', requireAuth, asyncRoute(async (req: Request, res: Response) => {
   try {
     const user = (req as any).user;
     const { productId, rating, comment } = req.body;
@@ -200,18 +211,18 @@ app.post('/api/reviews', requireAuth, (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Product ID, rating (1-5), and review text are required.' });
     }
 
-    const product = db.getProductById(productId);
+    const product = await db.getProductById(productId);
     if (!product) {
       return res.status(404).json({ error: 'Product not found.' });
     }
 
     // Verify customer has ordered this item
-    const userOrders = db.getOrdersByUserId(user.id);
+    const userOrders = await db.getOrdersByUserId(user.id);
     const hasPurchased = userOrders.some((order) =>
       order.items.some((item) => item.productId === productId)
     );
 
-    const review = db.createReview({
+    const review = await db.createReview({
       productId,
       productName: product.name,
       customerId: user.id,
@@ -225,22 +236,22 @@ app.post('/api/reviews', requireAuth, (req: Request, res: Response) => {
   } catch (err: any) {
     res.status(500).json({ error: err.message || 'Failed to submit review' });
   }
-});
+}));
 
 // --- Settings ---
-app.get('/api/settings', (_req: Request, res: Response) => {
-  const settings = db.getSettings();
+app.get('/api/settings', asyncRoute(async (_req: Request, res: Response) => {
+  const settings = await db.getSettings();
   res.json({ settings });
-});
+}));
 
 // --- Contact Messages ---
-app.post('/api/contact', (req: Request, res: Response) => {
+app.post('/api/contact', asyncRoute(async (req: Request, res: Response) => {
   try {
     const { name, email, phone, subject, message } = req.body;
     if (!name || !phone || !message) {
       return res.status(400).json({ error: 'Name, phone number, and message are required.' });
     }
-    const msg = db.createContactMessage({
+    const msg = await db.createContactMessage({
       name,
       email: email || '',
       phone,
@@ -251,7 +262,7 @@ app.post('/api/contact', (req: Request, res: Response) => {
   } catch (err: any) {
     res.status(500).json({ error: err.message || 'Failed to send message' });
   }
-});
+}));
 
 // --- Download Project ZIP & Archives ---
 const ARCHIVE_FILES: Record<string, { filename: string; mime: string }> = {
@@ -301,21 +312,21 @@ app.get('/api/download/:format', (req: Request, res: Response) => {
 });
 
 // --- Recently Viewed ---
-app.post('/api/recently-viewed', (req: Request, res: Response) => {
+app.post('/api/recently-viewed', asyncRoute(async (req: Request, res: Response) => {
   const user = (req as any).user;
   const { productId } = req.body;
   if (!productId) {
     return res.status(400).json({ error: 'Product ID required' });
   }
   if (user) {
-    const ids = db.addRecentlyViewed(user.id, productId);
+    const ids = await db.addRecentlyViewed(user.id, productId);
     return res.json({ recentlyViewedIds: ids });
   }
   // Guests track in sessionStorage, simply acknowledge
   res.json({ success: true, guest: true });
-});
+}));
 
-app.get('/api/recently-viewed', (req: Request, res: Response) => {
+app.get('/api/recently-viewed', asyncRoute(async (req: Request, res: Response) => {
   const user = (req as any).user;
   const { guestIds } = req.query;
 
@@ -328,15 +339,15 @@ app.get('/api/recently-viewed', (req: Request, res: Response) => {
     }
   }
 
-  const products = db.getRecentlyViewedProducts(user ? user.id : null, parsedGuestIds);
+  const products = await db.getRecentlyViewedProducts(user ? user.id : null, parsedGuestIds);
   res.json({ products });
-});
+}));
 
 /* ==========================================================================
    CUSTOMER AUTHENTICATION & PROFILE
    ========================================================================== */
 
-app.post('/api/auth/register', (req: Request, res: Response) => {
+app.post('/api/auth/register', asyncRoute(async (req: Request, res: Response) => {
   try {
     const { fullName, email, phone, password, address, city, state } = req.body;
     if (!fullName || !email || !phone || !password) {
@@ -350,58 +361,76 @@ app.post('/api/auth/register', (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Password must be at least 6 characters long.' });
     }
 
-    const user = db.createUser({
-      fullName,
-      email,
-      phone: normalizedPhone,
+    const { data: authData, error: authError } = await getSupabaseAdmin().auth.admin.createUser({
+      email: String(email).toLowerCase().trim(),
       password,
-      address,
-      city,
-      state,
+      email_confirm: true,
+      user_metadata: { full_name: fullName },
     });
+    if (authError || !authData.user) {
+      return res.status(400).json({ error: authError?.message || 'Account registration failed.' });
+    }
 
-    const token = createSessionToken(user);
-    res.status(201).json({ user, token, message: 'Account successfully registered!' });
+    let user;
+    try {
+      user = await db.createUser({
+        authUserId: authData.user.id,
+        fullName,
+        email,
+        phone: normalizedPhone,
+        address,
+        city,
+        state,
+      });
+    } catch (error) {
+      const { error: cleanupError } = await getSupabaseAdmin().auth.admin.deleteUser(authData.user.id);
+      if (cleanupError) console.error('Could not roll back Supabase Auth user after profile creation failed:', cleanupError);
+      throw error;
+    }
+
+    res.status(201).json({ user, message: 'Account successfully registered!' });
   } catch (err: any) {
     res.status(400).json({ error: err.message || 'Registration failed.' });
   }
-});
+}));
 
-app.post('/api/auth/login', (req: Request, res: Response) => {
+app.post('/api/auth/login', asyncRoute(async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required.' });
     }
 
-    const userRecord = db.findUserByEmail(email);
-    if (!userRecord || !verifyPassword(password, userRecord.passwordHash)) {
+    const { data, error } = await getSupabasePublic().auth.signInWithPassword({
+      email: String(email),
+      password: String(password),
+    });
+    if (error || !data.user || !data.session) {
       return res.status(401).json({ error: 'Invalid email address or password.' });
     }
 
-    const { passwordHash: _, ...safeUser } = userRecord;
-    const token = createSessionToken(safeUser);
-    res.json({ user: safeUser, token, message: `Welcome back, ${safeUser.fullName}!` });
+    const user = await db.findUserByAuthId(data.user.id);
+    if (!user) return res.status(403).json({ error: 'This account has not been migrated into the store.' });
+    res.json({ user, token: data.session.access_token, message: `Welcome back, ${user.fullName}!` });
   } catch (err: any) {
     res.status(500).json({ error: err.message || 'Login failed.' });
   }
-});
+}));
 
-app.get('/api/auth/me', (req: Request, res: Response) => {
+app.get('/api/auth/me', asyncRoute(async (req: Request, res: Response) => {
   const user = (req as any).user;
   if (!user) {
     return res.status(401).json({ user: null });
   }
-  const { passwordHash: _, ...safeUser } = user;
-  res.json({ user: safeUser });
-});
+  res.json({ user });
+}));
 
-app.put('/api/auth/profile', requireAuth, (req: Request, res: Response) => {
+app.put('/api/auth/profile', requireAuth, asyncRoute(async (req: Request, res: Response) => {
   try {
     const currentUser = (req as any).user;
     const { fullName, phone, address, city, state } = req.body;
 
-    const updated = db.updateUserProfile(currentUser.id, {
+    const updated = await db.updateUserProfile(currentUser.id, {
       fullName,
       phone,
       address,
@@ -413,43 +442,38 @@ app.put('/api/auth/profile', requireAuth, (req: Request, res: Response) => {
   } catch (err: any) {
     res.status(500).json({ error: err.message || 'Failed to update profile' });
   }
-});
+}));
 
-app.post('/api/auth/logout', (req: Request, res: Response) => {
-  const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    const token = authHeader.split(' ')[1];
-    sessions.delete(token);
-  }
+app.post('/api/auth/logout', (_req: Request, res: Response) => {
   res.json({ message: 'Logged out successfully' });
 });
 
 // --- Customer Wishlist ---
-app.get('/api/wishlist', requireAuth, (req: Request, res: Response) => {
+app.get('/api/wishlist', requireAuth, asyncRoute(async (req: Request, res: Response) => {
   const user = (req as any).user;
-  const products = db.getWishlistProducts(user.id);
+  const products = await db.getWishlistProducts(user.id);
   res.json({ products, productIds: user.wishlist || [] });
-});
+}));
 
-app.post('/api/wishlist/toggle', requireAuth, (req: Request, res: Response) => {
+app.post('/api/wishlist/toggle', requireAuth, asyncRoute(async (req: Request, res: Response) => {
   try {
     const user = (req as any).user;
     const { productId } = req.body;
     if (!productId) {
       return res.status(400).json({ error: 'Product ID required' });
     }
-    const result = db.toggleWishlist(user.id, productId);
+    const result = await db.toggleWishlist(user.id, productId);
     res.json(result);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
-});
+}));
 
 /* ==========================================================================
    ORDERS & CHECKOUT
    ========================================================================== */
 
-app.post('/api/orders', requireAuth, (req: Request, res: Response) => {
+app.post('/api/orders', requireAuth, asyncRoute(async (req: Request, res: Response) => {
   try {
     const user = (req as any).user;
     const {
@@ -475,7 +499,7 @@ app.post('/api/orders', requireAuth, (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Your cart is empty. Please select products to order.' });
     }
 
-    const order = db.createOrder({
+    const order = await db.createOrder({
       customer: {
         id: user.id,
         fullName: fullName || user.fullName,
@@ -504,31 +528,31 @@ app.post('/api/orders', requireAuth, (req: Request, res: Response) => {
   } catch (err: any) {
     res.status(400).json({ error: err.message || 'Order creation failed.' });
   }
-});
+}));
 
-app.get('/api/orders', requireAuth, (req: Request, res: Response) => {
+app.get('/api/orders', requireAuth, asyncRoute(async (req: Request, res: Response) => {
   const user = (req as any).user;
   if (user.role === 'admin') {
     // Admin can see all or own
-    const orders = db.getOrders();
+    const orders = await db.getOrders();
     return res.json({ orders });
   }
-  const orders = db.getOrdersByUserId(user.id);
+  const orders = await db.getOrdersByUserId(user.id);
   res.json({ orders });
-});
+}));
 
-app.get('/api/orders/:refOrId', (req: Request, res: Response) => {
+app.get('/api/orders/:refOrId', asyncRoute(async (req: Request, res: Response) => {
   const { refOrId } = req.params;
   const user = (req as any).user;
 
-  const order = db.getOrderByReference(refOrId) || db.getOrderById(refOrId);
+  const order = (await db.getOrderByReference(refOrId)) || (await db.getOrderById(refOrId));
   if (!order) {
     return res.status(404).json({ error: 'Order not found with provided reference.' });
   }
 
   // Security isolation check: only order owner or admin can view order details
   if (user && (user.id === order.customer.id || user.role === 'admin')) {
-    const emails = db.getEmailNotifications(order.id);
+    const emails = await db.getEmailNotifications(order.id);
     return res.json({ order, emails });
   }
 
@@ -545,26 +569,30 @@ app.get('/api/orders/:refOrId', (req: Request, res: Response) => {
       itemCount: order.items.length,
     },
   });
-});
+}));
 
 /* ==========================================================================
    ADMIN DASHBOARD ENDPOINTS (PROTECTED BY REQUIREADMIN)
    ========================================================================== */
 
-app.get('/api/admin/overview', requireAdmin, (_req: Request, res: Response) => {
-  const stats = db.getAdminStats();
-  const recentOrders = db.getOrders().slice(0, 8);
-  const lowStock = db.getProducts(true).filter((p) => p.stock > 0 && p.stock <= 20);
+app.get('/api/admin/overview', requireAdmin, asyncRoute(async (_req: Request, res: Response) => {
+  const [stats, orders, products] = await Promise.all([
+    db.getAdminStats(),
+    db.getOrders(),
+    db.getProducts(true),
+  ]);
+  const recentOrders = orders.slice(0, 8);
+  const lowStock = products.filter((p) => p.stock > 0 && p.stock <= 20);
   res.json({ stats, recentOrders, lowStock });
-});
+}));
 
 // Admin Products (includes draft soaps & unpublished items)
-app.get('/api/admin/products', requireAdmin, (_req: Request, res: Response) => {
-  const products = db.getProducts(true);
+app.get('/api/admin/products', requireAdmin, asyncRoute(async (_req: Request, res: Response) => {
+  const products = await db.getProducts(true);
   res.json({ products });
-});
+}));
 
-app.post('/api/admin/products', requireAdmin, (req: Request, res: Response) => {
+app.post('/api/admin/products', requireAdmin, asyncRoute(async (req: Request, res: Response) => {
   try {
     const productData = req.body;
     if (!productData.name || !productData.price || !productData.category) {
@@ -577,7 +605,7 @@ app.post('/api/admin/products', requireAdmin, (req: Request, res: Response) => {
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-|-$/g, '');
 
-    const product = db.createProduct({
+    const product = await db.createProduct({
       ...productData,
       slug,
       rating: productData.rating || 5.0,
@@ -591,13 +619,13 @@ app.post('/api/admin/products', requireAdmin, (req: Request, res: Response) => {
   } catch (err: any) {
     res.status(500).json({ error: err.message || 'Failed to create product.' });
   }
-});
+}));
 
-app.put('/api/admin/products/:id', requireAdmin, (req: Request, res: Response) => {
+app.put('/api/admin/products/:id', requireAdmin, asyncRoute(async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const updates = req.body;
-    const product = db.updateProduct(id, updates);
+    const product = await db.updateProduct(id, updates);
     if (!product) {
       return res.status(404).json({ error: 'Product not found.' });
     }
@@ -605,21 +633,21 @@ app.put('/api/admin/products/:id', requireAdmin, (req: Request, res: Response) =
   } catch (err: any) {
     res.status(500).json({ error: err.message || 'Failed to update product.' });
   }
-});
+}));
 
-app.delete('/api/admin/products/:id', requireAdmin, (req: Request, res: Response) => {
+app.delete('/api/admin/products/:id', requireAdmin, asyncRoute(async (req: Request, res: Response) => {
   const { id } = req.params;
-  const deleted = db.deleteProduct(id);
+  const deleted = await db.deleteProduct(id);
   if (!deleted) {
     return res.status(404).json({ error: 'Product not found or already removed.' });
   }
   res.json({ success: true, message: 'Product deleted.' });
-});
+}));
 
 // Admin Orders
-app.get('/api/admin/orders', requireAdmin, (req: Request, res: Response) => {
+app.get('/api/admin/orders', requireAdmin, asyncRoute(async (req: Request, res: Response) => {
   const { status, search } = req.query;
-  let orders = db.getOrders();
+  let orders = await db.getOrders();
 
   if (status && typeof status === 'string' && status !== 'all') {
     orders = orders.filter((o) => o.status === status);
@@ -638,9 +666,9 @@ app.get('/api/admin/orders', requireAdmin, (req: Request, res: Response) => {
   }
 
   res.json({ orders, total: orders.length });
-});
+}));
 
-app.put('/api/admin/orders/:id/status', requireAdmin, (req: Request, res: Response) => {
+app.put('/api/admin/orders/:id/status', requireAdmin, asyncRoute(async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { status, note, paymentStatus } = req.body;
@@ -649,7 +677,7 @@ app.put('/api/admin/orders/:id/status', requireAdmin, (req: Request, res: Respon
       return res.status(400).json({ error: 'Status is required.' });
     }
 
-    const order = db.updateOrderStatus(
+    const order = await db.updateOrderStatus(
       id,
       status as OrderStatus,
       note,
@@ -661,7 +689,7 @@ app.put('/api/admin/orders/:id/status', requireAdmin, (req: Request, res: Respon
     }
 
     // Retrieve triggered email notifications
-    const emails = db.getEmailNotifications(order.id);
+    const emails = await db.getEmailNotifications(order.id);
 
     res.json({
       order,
@@ -671,21 +699,21 @@ app.put('/api/admin/orders/:id/status', requireAdmin, (req: Request, res: Respon
   } catch (err: any) {
     res.status(500).json({ error: err.message || 'Failed to update order status.' });
   }
-});
+}));
 
-app.put('/api/admin/orders/:id/notes', requireAdmin, (req: Request, res: Response) => {
+app.put('/api/admin/orders/:id/notes', requireAdmin, asyncRoute(async (req: Request, res: Response) => {
   const { id } = req.params;
   const { internalNotes } = req.body;
-  const order = db.updateOrderInternalNotes(id, String(internalNotes || ''));
+  const order = await db.updateOrderInternalNotes(id, String(internalNotes || ''));
   if (!order) return res.status(404).json({ error: 'Order not found.' });
   res.json({ order, message: 'Internal notes saved.' });
-});
+}));
 
-app.post('/api/admin/orders/:id/resend-email', requireAdmin, (req: Request, res: Response) => {
+app.post('/api/admin/orders/:id/resend-email', requireAdmin, asyncRoute(async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
-    const order = db.getOrderById(id);
+    const order = await db.getOrderById(id);
     if (!order) return res.status(404).json({ error: 'Order not found.' });
 
     const emailStatus = status || order.status;
@@ -693,33 +721,33 @@ app.post('/api/admin/orders/:id/resend-email', requireAdmin, (req: Request, res:
       return res.status(400).json({ error: 'Email template only available for confirmed, dispatched, or delivered status.' });
     }
 
-    const sentEmail = db.sendOrderEmailNotification(order, emailStatus);
+    const sentEmail = await db.sendOrderEmailNotification(order, emailStatus);
     res.json({ email: sentEmail, message: `Brand email [${emailStatus}] successfully generated & logged to ${order.customer.email}.` });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
-});
+}));
 
 // Admin Email Notification Logs
-app.get('/api/admin/emails', requireAdmin, (req: Request, res: Response) => {
+app.get('/api/admin/emails', requireAdmin, asyncRoute(async (req: Request, res: Response) => {
   const { orderId } = req.query;
-  const emails = db.getEmailNotifications(typeof orderId === 'string' ? orderId : undefined);
+  const emails = await db.getEmailNotifications(typeof orderId === 'string' ? orderId : undefined);
   res.json({ emails });
-});
+}));
 
 // Admin Delivery Zones
-app.get('/api/admin/delivery-zones', requireAdmin, (_req: Request, res: Response) => {
-  const zones = db.getDeliveryZones();
+app.get('/api/admin/delivery-zones', requireAdmin, asyncRoute(async (_req: Request, res: Response) => {
+  const zones = await db.getDeliveryZones();
   res.json({ zones });
-});
+}));
 
-app.post('/api/admin/delivery-zones', requireAdmin, (req: Request, res: Response) => {
+app.post('/api/admin/delivery-zones', requireAdmin, asyncRoute(async (req: Request, res: Response) => {
   try {
     const { state, areaName, fee, isServiceable, estimatedDeliveryDays, notes } = req.body;
     if (!state || !areaName || fee === undefined) {
       return res.status(400).json({ error: 'State, area name, and fee are required.' });
     }
-    const zone = db.createDeliveryZone({
+    const zone = await db.createDeliveryZone({
       state,
       areaName,
       fee: Number(fee),
@@ -731,73 +759,67 @@ app.post('/api/admin/delivery-zones', requireAdmin, (req: Request, res: Response
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
-});
+}));
 
-app.put('/api/admin/delivery-zones/:id', requireAdmin, (req: Request, res: Response) => {
+app.put('/api/admin/delivery-zones/:id', requireAdmin, asyncRoute(async (req: Request, res: Response) => {
   const { id } = req.params;
   const updates = req.body;
-  const updated = db.updateDeliveryZone(id, updates);
+  const updated = await db.updateDeliveryZone(id, updates);
   if (!updated) return res.status(404).json({ error: 'Zone not found' });
   res.json({ zone: updated, message: 'Delivery rate updated.' });
-});
+}));
 
-app.delete('/api/admin/delivery-zones/:id', requireAdmin, (req: Request, res: Response) => {
+app.delete('/api/admin/delivery-zones/:id', requireAdmin, asyncRoute(async (req: Request, res: Response) => {
   const { id } = req.params;
-  const ok = db.deleteDeliveryZone(id);
+  const ok = await db.deleteDeliveryZone(id);
   res.json({ success: ok });
-});
+}));
 
 // Admin Review Moderation
-app.get('/api/admin/reviews', requireAdmin, (_req: Request, res: Response) => {
-  const reviews = db.getReviews(undefined, false); // All reviews
+app.get('/api/admin/reviews', requireAdmin, asyncRoute(async (_req: Request, res: Response) => {
+  const reviews = await db.getReviews(undefined, false); // All reviews
   res.json({ reviews });
-});
+}));
 
-app.put('/api/admin/reviews/:id/moderate', requireAdmin, (req: Request, res: Response) => {
+app.put('/api/admin/reviews/:id/moderate', requireAdmin, asyncRoute(async (req: Request, res: Response) => {
   const { id } = req.params;
   const { isApproved } = req.body;
-  const review = db.moderateReview(id, Boolean(isApproved));
+  const review = await db.moderateReview(id, Boolean(isApproved));
   if (!review) return res.status(404).json({ error: 'Review not found' });
   res.json({ review, message: isApproved ? 'Review approved for public display.' : 'Review hidden from public view.' });
-});
+}));
 
-app.delete('/api/admin/reviews/:id', requireAdmin, (req: Request, res: Response) => {
+app.delete('/api/admin/reviews/:id', requireAdmin, asyncRoute(async (req: Request, res: Response) => {
   const { id } = req.params;
-  const ok = db.deleteReview(id);
+  const ok = await db.deleteReview(id);
   res.json({ success: ok });
-});
+}));
 
 // Admin Customer Directory
-app.get('/api/admin/customers', requireAdmin, (_req: Request, res: Response) => {
-  const users = db.getUsers().map(({ passwordHash: _, ...user }) => {
-    const userOrders = db.getOrdersByUserId(user.id);
-    const totalSpent = userOrders.filter((o) => o.status !== 'cancelled').reduce((acc, o) => acc + o.total, 0);
-    return {
-      ...user,
-      orderCount: userOrders.length,
-      totalSpent,
-    };
+app.get('/api/admin/customers', requireAdmin, asyncRoute(async (_req: Request, res: Response) => {
+  const [profiles, orders] = await Promise.all([db.getUsers(), db.getOrders()]);
+  const users = profiles.map((user) => {
+    const userOrders = orders.filter((order) => order.customer.id === user.id);
+    const totalSpent = userOrders.filter((order) => order.status !== 'cancelled').reduce((sum, order) => sum + order.total, 0);
+    return { ...user, orderCount: userOrders.length, totalSpent };
   });
   res.json({ customers: users });
-});
+}));
 
-// Admin Settings
-app.put('/api/admin/settings', requireAdmin, (req: Request, res: Response) => {
-  const updates = req.body;
-  const settings = db.updateSettings(updates);
-  res.json({ settings, message: 'Business settings updated.' });
-});
+app.put('/api/admin/settings', requireAdmin, asyncRoute(async (req: Request, res: Response) => {
+  const settings = await db.updateSettings(req.body);
+  res.json({ settings, message: 'Settings updated.' });
+}));
 
-app.get('/api/admin/messages', requireAdmin, (_req: Request, res: Response) => {
-  const messages = db.getContactMessages();
+app.get('/api/admin/messages', requireAdmin, asyncRoute(async (_req: Request, res: Response) => {
+  const messages = await db.getContactMessages();
   res.json({ messages });
-});
+}));
 
-app.put('/api/admin/messages/:id/read', requireAdmin, (req: Request, res: Response) => {
-  const { id } = req.params;
-  const ok = db.markContactMessageRead(id);
+app.put('/api/admin/messages/:id/read', requireAdmin, asyncRoute(async (req: Request, res: Response) => {
+  const ok = await db.markContactMessageRead(req.params.id);
   res.json({ success: ok });
-});
+}));
 
 /* ==========================================================================
    VITE DEV MIDDLEWARE & PRODUCTION STATIC SERVING
@@ -820,6 +842,12 @@ async function startServer() {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
+
+  app.use((err: Error, _req: Request, res: Response, next: NextFunction) => {
+    if (res.headersSent) return next(err);
+    console.error('Unhandled API error:', err);
+    res.status(500).json({ error: 'The server could not complete the request.' });
+  });
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`✨ Comfy's Glow Server running on http://localhost:${PORT}`);

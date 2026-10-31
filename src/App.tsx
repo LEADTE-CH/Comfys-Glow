@@ -120,8 +120,7 @@ const AppContent: React.FC = () => {
   // Fetch all published products
   const fetchProducts = async () => {
     try {
-      const productsUrl = import.meta.env.PROD ? '/products.json' : '/api/products';
-      const res = await fetch(productsUrl);
+      const res = await fetch('/api/products');
       if (!res.ok) {
         throw new Error(`Product request failed with status ${res.status}`);
       }
@@ -352,7 +351,13 @@ const AppContent: React.FC = () => {
 
         {currentView === 'auth' && (
           <AuthPage
-            initialMode={(viewParam as any) || 'login'}
+            initialMode={
+              viewParam === 'register' ||
+              viewParam === 'forgot-password' ||
+              viewParam === 'reset-password'
+                ? viewParam
+                : 'login'
+            }
             onSuccess={() => handleNavigate(viewParam === 'checkout' ? 'checkout' : 'home')}
             onNavigate={handleNavigate}
           />

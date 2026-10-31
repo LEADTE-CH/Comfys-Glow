@@ -2,19 +2,21 @@ services:
   - type: web
     name: comfys-glow-api
     runtime: node
-    plan: starter
-    buildCommand: npm ci && npm run build
+    plan: free
+    buildCommand: npm install && npm run build
     startCommand: npm run start
-    disk:
-      name: comfys-glow-data
-      mountPath: /opt/render/project/src/data
-      sizeGB: 1
     envVars:
       - key: NODE_VERSION
         value: 22.14.0
       - key: NODE_ENV
         value: production
-      - key: ADMIN_EMAIL
+      - key: SUPABASE_URL
         sync: false
-      - key: ADMIN_PASSWORD
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_ANON_KEY
         sync: false

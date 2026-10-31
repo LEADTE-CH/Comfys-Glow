@@ -82,11 +82,10 @@ All delivery rates are editable directly by the administrator via the Admin Dash
 
 ## 5. Technology Stack & Architecture
 
-### Full-Stack Express Server with Vite Middleware
+### React Frontend, Express API, and Supabase
 - **Frontend:** React 19, TypeScript, Tailwind CSS v4, Motion, Lucide icons.
-- **Backend API:** Node.js Express server running on port `3000` (`server.ts`).
-- **Database & Persistence:** Real persistent data layer stored at `./data/db.json` with synchronous atomic file operations, ensuring orders, products, reviews, customer accounts, and settings persist across restarts.
-- **Python / Django Architecture:** Complete Django models, serializers, views, admin, and migration scripts provided in `/python_backend/`.
+- **Backend API:** Node.js Express API (`server.ts`) deployed as a free Render web service and proxied through Vercel.
+- **Database & Authentication:** Supabase PostgreSQL and Supabase Auth. The service-role key remains server-side; the browser uses the public anon key. Legacy `data/db.json` is only used as the one-time migration source.
 
 ---
 
@@ -166,18 +165,39 @@ npm run build
 npm run start
 ```
 
+### Supabase Setup
+1. Create a Supabase project and open its SQL Editor.
+2. Run the SQL in `supabase/schema.sql` to create the private application tables.
+3. Copy the project URL, anon key, and service role key from Supabase project settings.
+4. Put `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in a local `.env` file, then run `npm run migrate:supabase`. The migration reads `data/db.json` locally, copies product/order/account data into Supabase, and creates Supabase Auth users with randomly generated passwords. It does not print passwords or upload the JSON file elsewhere.
+5. Add the values to Render and Vercel as described below. Keep the service role key only on Render; the frontend uses the anon key.
+6. In Supabase Authentication URL Configuration, set the production site URL and add `https://YOUR-DOMAIN/auth/reset-password` to the allowed redirect URLs.
+
+For local development, add `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `VITE_SUPABASE_URL`, and `VITE_SUPABASE_ANON_KEY` to your ignored `.env` file. Never commit the service-role key.
+
+Existing profiles and order histories are preserved, but the old password hashes cannot be reused with Supabase Auth. Migrated customers and administrators must use **Forgot your password?** to set a new password. Verify the reset email provider is configured in Supabase before migrating accounts.
+
+Supabase's built-in email delivery is intended for testing and has sending limits. For reliable password recovery on a live store, configure Supabase Auth SMTP with a verified sender/domain.
+
 ### Deploying to Vercel and Render
-Vercel serves the frontend, while the Express API runs as a Render web service. The Render blueprint in `render.yaml` configures the API and a persistent disk for `data/db.json`; persistent storage requires a paid Render service.
+Vercel serves the frontend and forwards `/api/*` to the Express API on Render. Supabase provides the persistent PostgreSQL database and user authentication. The Render Blueprint in `render.yaml` uses the free web-service plan and does not store application data on its temporary filesystem.
 
-1. In Render, create a new Blueprint from this repository and deploy the `comfys-glow-api` service.
-2. Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in the Render service environment. Use the same values for the administrator sign-in page.
-3. Keep the Render service URL as `https://comfys-glow-api.onrender.com`, which is the API destination configured in `vercel.json`. If Render assigns a different URL, update that rewrite destination to match.
-4. Redeploy the Vercel project so `/api/*` requests are forwarded to the running Express API.
+1. Deploy the `comfys-glow-api` service on Render from this repository using `render.yaml`.
+2. Set `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` in Render's environment settings.
+3. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in Vercel's project environment settings, then redeploy.
+4. If Render assigns a service URL other than `https://comfys-glow-api.onrender.com`, update the API rewrite in `vercel.json` and redeploy Vercel.
+5. Confirm `https://YOUR-RENDER-SERVICE/api/health` returns `{"status":"ok"}`.
 
-The API service needs to be deployed and its environment variables configured before login, orders, or other API-backed features will work on the Vercel site.
+Render's free service can spin down when idle, so the first API call after inactivity may take longer. Supabase's free project may pause after a period of inactivity. Both are free-tier limitations; neither should be treated as an uptime guarantee for a production store.
 
 ### Administrator Setup
-Copy `.env.example` to `.env`, then set `ADMIN_EMAIL` and a unique `ADMIN_PASSWORD` before starting the server to create the initial administrator account. No default login credentials are included.
+For a migrated store, keep the existing admin profile (its `role` remains `admin`) and use Supabase password recovery to set a new password. For a new store, register an account, then assign its profile the `admin` role in the Supabase SQL Editor:
+```sql
+update public.profiles
+set role = 'admin',
+    data = jsonb_set(data, '{role}', '"admin"')
+where email = 'admin@example.com';
+```
 
 ---
 

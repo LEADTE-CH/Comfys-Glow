@@ -1,5 +1,16 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import type { User } from '../types/index.ts';
+import { supabase } from '../lib/supabase.ts';
+
+interface RegisterUserData {
+  fullName: string;
+  email: string;
+  phone: string;
+  password: string;
+  address?: string;
+  city?: string;
+  state?: string;
+}
 
 interface AuthContextType {
   user: User | null;
@@ -7,15 +18,9 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isAdmin: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  register: (userData: {
-    fullName: string;
-    email: string;
-    phone: string;
-    password: string;
-    address?: string;
-    city?: string;
-    state?: string;
-  }) => Promise<{ success: boolean; error?: string }>;
+  register: (userData: RegisterUserData) => Promise<{ success: boolean; error?: string }>;
+  sendPasswordReset: (email: string) => Promise<{ success: boolean; error?: string }>;
+  updatePassword: (password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   updateProfile: (updates: Partial<User>) => Promise<boolean>;
   refreshUser: () => Promise<void>;
@@ -23,11 +28,9 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-async function readAuthResponse(res: Response): Promise<{ error?: string; token?: string; user?: User } | null> {
+async function readJson<T>(response: Response): Promise<T | null> {
   try {
-    const data: unknown = await res.json();
-    if (typeof data !== 'object' || data === null) return null;
-    return data as { error?: string; token?: string; user?: User };
+    return (await response.json()) as T;
   } catch {
     return null;
   }
@@ -35,113 +38,146 @@ async function readAuthResponse(res: Response): Promise<{ error?: string; token?
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem('cg_auth_token'));
+  const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchCurrentUser = async (authToken: string) => {
     try {
-      const res = await fetch('/api/auth/me', {
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-        },
+      const response = await fetch('/api/auth/me', {
+        headers: { Authorization: `Bearer ${authToken}` },
       });
-      if (res.ok) {
-        const data = await res.json();
-        setUser(data.user);
-      } else {
-        localStorage.removeItem('cg_auth_token');
-        setToken(null);
+      const data = await readJson<{ user?: User | null }>(response);
+      if (!response.ok || !data?.user) {
+        if (response.status === 401) await supabase?.auth.signOut();
         setUser(null);
+        return;
       }
-    } catch (err) {
-      console.error('Error fetching current user:', err);
+      setUser(data.user);
+    } catch (error) {
+      console.error('Error fetching current user:', error);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (token) {
-      fetchCurrentUser(token);
-    } else {
+    localStorage.removeItem('cg_auth_token');
+    if (!supabase) {
       setLoading(false);
+      return;
     }
-  }, [token]);
+
+    let active = true;
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!active) return;
+      const accessToken = session?.access_token || null;
+      setToken(accessToken);
+      if (accessToken) {
+        void fetchCurrentUser(accessToken);
+      } else {
+        setUser(null);
+        setLoading(false);
+      }
+    });
+
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (!active) return;
+      if (error) {
+        console.error('Error restoring Supabase session:', error);
+        setLoading(false);
+        return;
+      }
+      if (!data.session) setLoading(false);
+    });
+
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const login = async (email: string, password: string) => {
+    if (!supabase) {
+      return { success: false, error: 'Supabase is not configured for this website yet.' };
+    }
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) return { success: false, error: error.message };
+    if (!data.session) return { success: false, error: 'Supabase did not create an authenticated session.' };
+
     try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+      const response = await fetch('/api/auth/me', {
+        headers: { Authorization: `Bearer ${data.session.access_token}` },
       });
-      const data = await readAuthResponse(res);
-      if (!data) {
-        return {
-          success: false,
-          error: `The authentication service returned an empty or invalid response (HTTP ${res.status}). Check that the API service is deployed and running.`,
-        };
+      const profile = await readJson<{ user?: User | null }>(response);
+      if (!response.ok || !profile?.user) {
+        await supabase.auth.signOut();
+        return { success: false, error: 'Your Supabase account has no store profile. Complete the data migration first.' };
       }
-      if (!res.ok) {
-        return { success: false, error: data.error || 'Login failed' };
-      }
-      if (!data.token || !data.user) {
-        return { success: false, error: 'The authentication service returned an incomplete login response.' };
-      }
-      localStorage.setItem('cg_auth_token', data.token);
-      setToken(data.token);
-      setUser(data.user);
+      setUser(profile.user);
+      setToken(data.session.access_token);
       return { success: true };
-    } catch (err: any) {
-      return { success: false, error: err.message || 'Network error' };
+    } catch (error) {
+      await supabase.auth.signOut();
+      return { success: false, error: error instanceof Error ? error.message : 'Could not load your store profile.' };
     }
   };
 
-  const register = async (userData: any) => {
+  const register = async (userData: RegisterUserData) => {
+    if (!supabase) {
+      return { success: false, error: 'Supabase is not configured for this website yet.' };
+    }
     try {
-      const res = await fetch('/api/auth/register', {
+      const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userData),
       });
-      const data = await readAuthResponse(res);
-      if (!data) {
-        return {
-          success: false,
-          error: `The authentication service returned an empty or invalid response (HTTP ${res.status}). Check that the API service is deployed and running.`,
-        };
-      }
-      if (!res.ok) {
-        return { success: false, error: data.error || 'Registration failed' };
-      }
-      if (!data.token || !data.user) {
-        return { success: false, error: 'The authentication service returned an incomplete registration response.' };
-      }
-      localStorage.setItem('cg_auth_token', data.token);
-      setToken(data.token);
-      setUser(data.user);
-      return { success: true };
-    } catch (err: any) {
-      return { success: false, error: err.message || 'Network error' };
+      const result = await readJson<{ error?: string }>(response);
+      if (!response.ok) return { success: false, error: result?.error || 'Registration failed.' };
+      return login(userData.email, userData.password);
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Network error' };
     }
   };
 
-  const logout = () => {
-    if (token) {
-      fetch('/api/auth/logout', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-      }).catch(() => {});
+  const sendPasswordReset = async (email: string) => {
+    if (!supabase) {
+      return { success: false, error: 'Supabase is not configured for this website yet.' };
     }
-    localStorage.removeItem('cg_auth_token');
-    setToken(null);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/reset-password`,
+    });
+    return error
+      ? { success: false, error: error.message }
+      : { success: true };
+  };
+
+  const updatePassword = async (password: string) => {
+    if (!supabase) {
+      return { success: false, error: 'Supabase is not configured for this website yet.' };
+    }
+    const { error } = await supabase.auth.updateUser({ password });
+    return error
+      ? { success: false, error: error.message }
+      : { success: true };
+  };
+
+  const logout = () => {
     setUser(null);
+    setToken(null);
+    if (supabase) {
+      void supabase.auth.signOut().then(({ error }) => {
+        if (error) console.error('Supabase sign-out failed:', error);
+      });
+    }
   };
 
   const updateProfile = async (updates: Partial<User>) => {
     if (!token) return false;
     try {
-      const res = await fetch('/api/auth/profile', {
+      const response = await fetch('/api/auth/profile', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -149,21 +185,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         },
         body: JSON.stringify(updates),
       });
-      if (res.ok) {
-        const data = await res.json();
-        setUser(data.user);
-        return true;
-      }
-    } catch (err) {
-      console.error('Update profile error:', err);
+      const data = await readJson<{ user?: User }>(response);
+      if (!response.ok || !data?.user) return false;
+      setUser(data.user);
+      return true;
+    } catch (error) {
+      console.error('Update profile error:', error);
+      return false;
     }
-    return false;
   };
 
   const refreshUser = async () => {
-    if (token) {
-      await fetchCurrentUser(token);
-    }
+    if (token) await fetchCurrentUser(token);
   };
 
   return (
@@ -175,6 +208,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAdmin: user?.role === 'admin',
         login,
         register,
+        sendPasswordReset,
+        updatePassword,
         logout,
         updateProfile,
         refreshUser,
@@ -187,8 +222,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (!context) throw new Error('useAuth must be used within an AuthProvider');
   return context;
 };
